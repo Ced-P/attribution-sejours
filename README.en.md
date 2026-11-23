@@ -8,6 +8,8 @@ Everything is in a single file, `index.html`. You open it in a browser. There is
 
 The interface is in French, since the tool was built for French associations.
 
+**Live demo, with fictional data: https://ced-p.github.io/attribution-sejours/**
+
 ![Summary screen](docs/capture-synthese.png)
 
 ## Background
@@ -34,6 +36,8 @@ This public version has been generalised. It contains no real data: the demo dat
   - a CSV of contacts for personalised mailing.
 
 ## Try it
+
+The quickest way is the [live demo](https://ced-p.github.io/attribution-sejours/). To run it on your own computer:
 
 1. Download `index.html`.
 2. Open it in a browser.

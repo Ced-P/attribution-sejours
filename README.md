@@ -6,6 +6,8 @@ Un outil libre pour répartir les séjours dans une maison partagée par les mem
 
 Tout tient dans un seul fichier, `index.html`. On l'ouvre dans un navigateur, sans installation, sans serveur et sans compte. Les données restent sur l'ordinateur de la personne qui s'en sert.
 
+**Démo en ligne, avec des données fictives : https://ced-p.github.io/attribution-sejours/**
+
 ![Synthèse de l'attribution](docs/capture-synthese.png)
 
 ## D'où vient cet outil
@@ -34,6 +36,8 @@ Cette version publique a été généralisée. Elle ne contient aucune donnée r
 ![Détail d'une attribution](docs/capture-attribution.png)
 
 ## Essayer
+
+Le plus simple est d'ouvrir la [démo en ligne](https://ced-p.github.io/attribution-sejours/). Pour l'utiliser sur votre ordinateur :
 
 1. Téléchargez `index.html`.
 2. Ouvrez-le dans Chrome, Edge, Firefox ou Safari.
