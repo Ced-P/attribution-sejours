@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attribution des séjours</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,420;9..144,520;9..144,620&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F1E8; --card:#FFFFFF; --ink:#23201A; --muted:#6E675C; --line:#DED8CA; --line2:#EFECE2;
+  --teal:#16443D; --teal-deep:#0C2C27; --gold:#BE9E55; --gold-soft:#F3EAD3;
+  --ok:#1E7A5A; --ok-bg:#E6F2EC; --warn:#9A6512; --warn-bg:#FBF0DC;
+  --bad:#B3364B; --bad-bg:#F9E7EB; --force:#6D4FA3; --force-bg:#EFE9F8;
+  --info:#2C5E8A; --info-bg:#E8F0F7; --vac:#EAF1EE;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{font-family:'Source Sans 3',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5}
+.num{font-variant-numeric:tabular-nums}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font:inherit;color:var(--ink)}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.wrap{max-width:1280px;margin:0 auto;padding:0 16px}
+header{background:linear-gradient(135deg,var(--teal-deep),var(--teal));color:#F2EFE6}
+header .wrap{padding-top:24px;padding-bottom:22px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.eyebrow{color:var(--gold);font-size:.68rem;letter-spacing:.32em;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+header h1{font-family:'Fraunces',Georgia,serif;font-weight:520;font-size:1.9rem;line-height:1.15}
+header .sub{color:#BFD2CB;font-size:.85rem;margin-top:5px}
+.h-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:9px;font-weight:600;font-size:.85rem;transition:background .15s,color .15s,border-color .15s}
+.btn-gold{background:var(--gold);color:var(--teal-deep)} .btn-gold:hover{background:#D3B569}
+.btn-ghost{border:1.5px solid rgba(242,239,230,.4);color:#F2EFE6} .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn-teal{background:var(--teal);color:#fff} .btn-teal:hover{background:var(--teal-deep)}
+.btn-line{border:1.5px solid var(--line);background:var(--card);color:var(--ink)} .btn-line:hover{border-color:var(--teal)}
+.btn-force{background:var(--force);color:#fff} .btn-force:hover{background:#5A3F8C}
+.btn-danger{border:1.5px solid #E4C3CB;background:var(--card);color:var(--bad)} .btn-danger:hover{background:var(--bad-bg)}
+.btn-sm{padding:5px 10px;font-size:.78rem;border-radius:7px}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+
+#bandeau{background:var(--card);border-bottom:1px solid var(--line)}
+#bandeau .wrap{display:flex;align-items:center;gap:14px;padding-top:10px;padding-bottom:10px;flex-wrap:wrap;font-size:.85rem}
+.badge{font-size:.66rem;font-weight:700;letter-spacing:.12em;padding:4px 9px;border-radius:6px}
+.badge-int{background:var(--gold-soft);color:#7A6330}
+.badge-fic{background:var(--ok-bg);color:var(--ok)}
+#bandeau .src{flex:1;min-width:200px;color:var(--muted)}
+#bandeau .src b{color:var(--ink)}
+.toggle{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:.84rem;cursor:pointer;user-select:none}
+.toggle .sw{width:38px;height:22px;border-radius:99px;background:var(--line);position:relative;transition:background .15s;flex-shrink:0}
+.toggle .sw::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.toggle.on .sw{background:var(--ok)} .toggle.on .sw::after{left:19px}
+
+nav{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;box-shadow:0 1px 4px rgba(35,32,26,.05)}
+nav .wrap{display:flex;overflow-x:auto;gap:2px}
+.tab{padding:12px 14px;border-bottom:3px solid transparent;color:var(--muted);font-weight:600;font-size:.86rem;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--teal);border-bottom-color:var(--gold)}
+.tab .k{background:var(--gold-soft);color:#7A6330;border-radius:99px;padding:0 7px;font-size:.7rem;font-weight:700}
+.tab .k.alerte{background:var(--warn-bg);color:var(--warn)}
+
+main{padding:26px 0 50px}
+h2{font-family:'Fraunces',Georgia,serif;font-weight:520;font-size:1.6rem;margin-bottom:4px}
+.lead{color:var(--muted);max-width:780px;margin-bottom:20px}
+h3{font-family:'Fraunces',Georgia,serif;font-weight:520;font-size:1.18rem;margin:24px 0 10px}
+h4{font-size:.95rem;margin:14px 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+.note{background:var(--info-bg);border:1px solid #C9DBEA;color:#1F4460;border-radius:10px;padding:11px 14px;font-size:.87rem;margin:12px 0}
+.note-warn{background:var(--warn-bg);border-color:#E8D2A8;color:#6B4A10}
+.note-force{background:var(--force-bg);border-color:#D6C9EC;color:#4A356F}
+.note-ok{background:var(--ok-bg);border-color:#BCDCCB;color:#174F3B}
+.muted{color:var(--muted)} .small{font-size:.8rem} .mini{font-size:.74rem;color:var(--muted)}
+p+p{margin-top:8px}
+ul.plain{list-style:none} ul.puces{padding-left:18px} ul.puces li{margin-bottom:4px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat .v{font-family:'Fraunces',Georgia,serif;font-size:2rem;line-height:1}
+.stat .l{font-size:.8rem;color:var(--muted);margin-top:4px}
+
+.todo{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#FBFAF6;margin-bottom:8px;font-size:.88rem}
+.todo .ic{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700}
+.todo.ok .ic{background:var(--ok);color:#fff} .todo.w .ic{background:var(--warn);color:#fff}
+.todo button.lien{color:var(--info);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+
+.regle{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#FBFAF6;margin-bottom:8px}
+.regle label{font-size:.88rem;font-weight:600}
+.regle small{display:block;color:var(--muted);font-size:.76rem;font-weight:400}
+.regle input[type=number]{width:62px;text-align:center;font-weight:700;padding:5px;border:1px solid var(--line);border-radius:7px;background:#fff}
+.regle select{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;font-size:.84rem}
+.crit{display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;background:#FBFAF6}
+.crit .rang{width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.crit .lib{flex:1;font-size:.87rem;font-weight:600}
+.crit .lib small{display:block;font-weight:400;color:var(--muted);font-size:.75rem}
+.crit .fl{display:flex;flex-direction:column}
+.crit .fl button{color:var(--muted);line-height:.95;font-size:.8rem;padding:1px 5px}
+.crit .fl button:hover{color:var(--ink)}
+.bareme{width:100%;border-collapse:collapse;font-size:.85rem}
+.bareme td{padding:6px 8px;border-top:1px solid var(--line2)}
+.bareme td:last-child{text-align:right;font-weight:700}
+
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.toolbar input[type=search]{flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card)}
+.toolbar select{padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:.84rem}
+.chip{padding:6px 11px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-size:.78rem;font-weight:600;color:var(--muted)}
+.chip.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.tbl-wrap{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:auto}
+table.t{width:100%;border-collapse:collapse;font-size:.84rem}
+table.t thead th{position:sticky;top:0;background:#EFEBDF;color:#57503F;text-align:left;padding:8px 10px;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;z-index:2}
+table.t tbody td{padding:7px 10px;border-top:1px solid var(--line2);vertical-align:top}
+table.t tbody tr.clic{cursor:pointer} table.t tbody tr.clic:hover{background:#FAF8F1}
+table.t tbody tr.sel{background:#F3EFE2}
+td.r,th.r{text-align:right}
+.nowrap{white-space:nowrap}
+.score{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:24px;border-radius:7px;font-weight:700;padding:0 6px;font-size:.84rem}
+.s-neg{background:var(--force-bg);color:var(--force)} .s-0{background:var(--ok-bg);color:var(--ok)} .s-1{background:#E3EFEA;color:#1C5A4B}
+.s-2{background:var(--warn-bg);color:var(--warn)} .s-3{background:var(--bad-bg);color:var(--bad)}
+.tag{display:inline-block;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:6px;margin:1px 3px 1px 0;white-space:nowrap}
+.t-ok{background:var(--ok-bg);color:var(--ok)} .t-info{background:var(--info-bg);color:var(--info)} .t-warn{background:var(--warn-bg);color:var(--warn)}
+.t-bad{background:var(--bad-bg);color:var(--bad)} .t-force{background:var(--force-bg);color:var(--force)} .t-gold{background:var(--gold-soft);color:#7A6330}
+.t-gris{background:#EFECE2;color:var(--muted)}
+.ch{display:block;font-size:.8rem;line-height:1.35;margin-bottom:2px}
+.ch b{display:inline-block;width:16px;color:var(--muted)}
+.ch.gagne{color:var(--ok);font-weight:700}
+.ch.barre{color:#A59E90;text-decoration:line-through}
+.prix{font-variant-numeric:tabular-nums;white-space:nowrap}
+.prix.propose{color:var(--warn)}
+
+.detail{background:#FBFAF6;border-top:1px solid var(--line);padding:14px 16px}
+.detail .grid2{gap:20px}
+.detail table.t thead th{position:static;background:#F2EEE3}
+.ligne-ref{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:.85rem}
+.form-inline{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.form-inline input[type=text],.form-inline input[type=date],.form-inline select{padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:.84rem}
+.form-inline input[type=text]{min-width:140px}
+
+.att{background:var(--card);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;overflow:hidden}
+.att.f{border:2px solid #C9B7E8} .att.r{border:2px solid #E8D2A8} .att.ann{opacity:.6}
+.att-head{display:flex;align-items:stretch;width:100%;text-align:left}
+.att-head:hover{background:#FAF8F1}
+.att-date{padding:10px 14px;min-width:160px;border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:center}
+.att-date .d{font-family:'Fraunces',Georgia,serif;font-size:.98rem}
+.att-date small{font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.att-main{flex:1;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.att-main .who{font-weight:700}
+.att-main .how{font-size:.8rem;color:var(--muted)}
+.att-side{display:flex;align-items:center;gap:10px}
+.chev{color:var(--muted);transition:transform .15s;padding:0 12px;display:flex;align-items:center}
+.open .chev{transform:rotate(180deg)}
+.cand{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:8px;background:#fff;border:1px solid var(--line2);margin-bottom:5px;font-size:.85rem;flex-wrap:wrap}
+.cand .q{flex:1;min-width:180px}
+.dec-box{margin-top:12px;border:1.5px solid #D6C9EC;background:var(--force-bg);border-radius:10px;padding:12px}
+.dec-box h5{font-size:.84rem;color:#4A356F;margin-bottom:6px}
+@media(max-width:700px){.att-head{flex-direction:column}.att-date{border-right:none;border-bottom:1px solid var(--line)}}
+
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.cal-mois{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.cal-mois h4{font-family:'Fraunces',Georgia,serif;font-weight:520;font-size:1rem;margin:0 0 8px;color:var(--teal-deep)}
+.cal-tbl{width:100%;border-collapse:collapse;table-layout:fixed}
+.cal-tbl th{font-size:.58rem;color:var(--muted);padding:2px 0;text-transform:uppercase;text-align:center;font-weight:600}
+.cal-tbl td{height:30px;text-align:center;font-size:.68rem;border:1px solid #F0EBDD;padding:0;position:relative}
+.cal-tbl td.hm{background:transparent;border-color:transparent}
+.cal-tbl td.vac{background:var(--vac)}
+.cal-tbl td.occ{color:#fff;font-weight:700;border-color:rgba(255,255,255,.4)}
+.cal-tbl td.fer::after{content:'';position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--bad)}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--muted);margin:6px 0 14px}
+.leg span{display:inline-flex;align-items:center;gap:6px}
+.dotc{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+.fiche{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:26px 30px;box-shadow:0 2px 10px rgba(35,32,26,.06);position:relative}
+.fiche::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--teal),var(--gold))}
+.fiche .en-tete{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--gold);padding-bottom:12px;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.fiche .en-tete .t{font-family:'Fraunces',Georgia,serif;font-size:1.3rem}
+.j-dem{border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:9px;font-size:.88rem}
+.j-dem.gagne{border-color:#BCDCCB;background:#F5FAF7}
+.j-dem.perdu{border-color:#EBC9D1;background:#FDF7F8}
+.j-dem.neutre{background:#FAF9F4}
+.j-dem .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:3px;font-weight:700}
+textarea.lettre{width:100%;min-height:340px;padding:12px 14px;border:1px solid var(--line);border-radius:9px;background:#FBFAF4;font:inherit;font-size:.86rem;resize:vertical;line-height:1.5}
+textarea.modele{width:100%;min-height:200px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#FBFAF4;font-family:ui-monospace,Menlo,monospace;font-size:.78rem;resize:vertical}
+.vars{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 10px}
+.vars code{font-size:.72rem;background:#EFECE2;padding:2px 6px;border-radius:5px}
+.liste-f{max-height:70vh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.liste-f button{display:flex;justify-content:space-between;width:100%;text-align:left;padding:8px 12px;border-top:1px solid var(--line2);font-size:.86rem;gap:8px}
+.liste-f button:first-child{border-top:none}
+.liste-f button:hover{background:#FAF8F1}
+.liste-f button.on{background:#F0F4F0;font-weight:700}
+.split{display:grid;grid-template-columns:300px 1fr;gap:16px}
+@media(max-width:900px){.split{grid-template-columns:1fr}}
+
+.gap{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:9px}
+.gap.lib{border-color:#E8D2A8;background:#FFFCF4}
+.gap .h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.gap .h .d{font-family:'Fraunces',Georgia,serif;font-size:1rem}
+
+footer{border-top:1px solid var(--line);background:var(--card);padding:14px 0;text-align:center;color:var(--muted);font-size:.76rem}
+.hide{display:none!important}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--teal-deep);color:#fff;padding:10px 18px;border-radius:10px;font-size:.88rem;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:99;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.on{opacity:1}
+@media print{header,nav,#bandeau,footer,.no-print{display:none!important}main{padding:0}.fiche{box-shadow:none;border:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div>
+      <div class="eyebrow" id="h-eyebrow"></div>
+      <h1 id="h-titre">Attribution des séjours</h1>
+      <div class="sub" id="h-sub"></div>
+    </div>
+    <div class="h-actions">
+      <button class="btn btn-gold" data-act="importer">⭱ Importer un fichier</button>
+      <button class="btn btn-ghost" data-act="exporter">⭳ Exporter le classeur</button>
+      <button class="btn btn-ghost" data-act="reset">↺ Réinitialiser</button>
+    </div>
+  </div>
+</header>
+<div id="bandeau"><div class="wrap"></div></div>
+<nav><div class="wrap" id="nav-tabs"></div></nav>
+<main><div class="wrap" id="vue"></div></main>
+<footer><div class="wrap">Outil libre d'attribution des séjours (licence MIT). Les réglages et décisions sont enregistrés dans ce navigateur ; le classeur exporté les conserve pour l'année suivante.</div></footer>
+<input type="file" id="file-input" accept=".xlsx,.xls,.ods" class="hide">
+<div id="toast"></div>
+<script>
+/* ═══════════════ CONFIGURATION : à adapter à votre association ═══════════════
+   Tout ce qui est propre à votre association se règle dans cet objet.
+   Le reste du fichier n'a pas besoin d'être modifié. */
+const CONFIG = {
+  association: 'Association Exemple',               // nom affiché en haut de la page
+  lieu: 'la maison commune',                        // le lieu partagé, tel qu'on l'écrit après « un séjour à »
+  annee: 2027,                                      // année de la campagne d'attribution
+  signature: 'Le comité des séjours',               // signature des courriers
+  reglesVotees: 'les règles votées en conseil d\'administration',  // rappelées en tête de la synthèse
+  dateReponse: '2027-01-31',                        // date limite de réponse proposée dans les courriers
+  nuitsMax: 10,                                     // au-delà, une demande n'est pas examinée
+  libelleOption: 'Option',                          // question libre du formulaire (ex. « Bateau », « Linge fourni »)
+  contactTroisiemeTour: '',                         // adresse de contact du 3e tour ; laisser vide pour ne rien afficher
+
+  // Grille tarifaire en euros. « chaude » = saison haute (mois saisonHaute[0] à saisonHaute[1]), « froide » = le reste.
+  // sem_vac : semaine en vacances scolaires · sem_hors : semaine hors vacances · we : week-end (2 nuits, arrivée le vendredi)
+  // mw : « middle week » (4 nuits, arrivée le lundi). Les autres durées sont proposées au prorata, signalées par *.
+  saisonHaute: [5, 10],
+  grille: {chaude:{sem_vac:1800, sem_hors:1300, we:550, mw:800}, froide:{sem_vac:1100, sem_hors:700, we:380, mw:420}},
+
+  // Vacances scolaires, union des zones A, B et C (premier jour de vacances → dernier jour avant la reprise).
+  // La liste doit couvrir les trois années qui précèdent la campagne et l'année de la campagne.
+  vacances: [
+    ['2023-10-21','2023-11-05'],['2023-12-23','2024-01-07'],['2024-02-10','2024-03-10'],['2024-04-06','2024-05-05'],['2024-07-06','2024-09-01'],
+    ['2024-10-19','2024-11-03'],['2024-12-21','2025-01-05'],['2025-02-08','2025-03-09'],['2025-04-05','2025-05-04'],['2025-07-05','2025-08-31'],
+    ['2025-10-18','2025-11-02'],['2025-12-20','2026-01-04'],['2026-02-07','2026-03-08'],['2026-04-04','2026-05-03'],['2026-07-04','2026-08-31'],
+    ['2026-10-17','2026-11-01'],['2026-12-19','2027-01-03'],['2027-02-06','2027-03-07'],['2027-04-03','2027-05-02'],['2027-07-03','2027-09-01'],
+    ['2027-10-23','2027-11-07'],['2027-12-18','2028-01-02'],
+  ],
+  // Nom des périodes de vacances de l'année de campagne (clé = premier jour de la période)
+  nomsVacances: {'2026-12-19':'Noël','2027-02-06':'Hiver','2027-04-03':'Printemps','2027-07-03':'Été','2027-10-23':'Toussaint','2027-12-18':'Noël'},
+  feries: ['2027-01-01','2027-03-29','2027-05-01','2027-05-06','2027-05-08','2027-05-17','2027-07-14','2027-08-15','2027-11-01','2027-11-11','2027-12-25','2028-01-01'],
+
+  // Couleur de chaque branche dans le calendrier (numéro de branche entre parenthèses dans la colonne « Branche »)
+  couleursBranches: [['1','#3A6A8A'],['2','#5E9550'],['3','#B7684C'],['4','#6D4FA3'],['5','#A98436'],['6','#B5443C'],['7','#4F7D6B'],['8','#C9708A']],
+
+  // Corrections d'orthographe appliquées aux noms à l'affichage, ex. {'Lefevre':'Lefèvre'}
+  corrections: {},
+};
+
+/* Données de démonstration : entièrement fictives. Remplacées dès que vous importez votre classeur. */
+const DATA_INTEGREES = {"source":{"demandes":"Demandes 2027 fictives (démonstration)","historique":"Historique fictif 2010-2026","refus":"Refus fictifs 2022-2026"},"hist":[[2010,"2010-01-29","2010-02-05","AUBRY","OMBELINE","2.4.4","2"],[2010,"2010-02-12","2010-02-19","LACROIX","LEONIE","4.4.4.3","4"],[2010,"2010-03-26","2010-04-02","ROLLAND","PAULIN","5.4.7","5"],[2010,"2010-04-09","2010-04-16","WEBER","APOLLINE","4.2.5","4"],[2010,"2010-04-16","2010-04-23","MASSON","ARMAND","4.2.9","4"],[2010,"2010-04-30","2010-05-07","BENARD","JOSEPHINE","4.2.4","4"],[2010,"2010-05-07","2010-05-14","GAILLARD","TIPHAINE","5.1.1","5"],[2010,"2010-07-02","2010-07-04","GUILLOT","CORENTIN","2.2.7.2","2"],[2010,"2010-07-09","2010-07-16","TEXIER","EULALIE","2.2.7","2"],[2010,"2010-07-16","2010-07-23","BRUN","NINA","3.5.5","3"],[2010,"2010-07-23","2010-07-30","PARIS","DAPHNE","5.4.1","5"],[2010,"2010-07-30","2010-08-06","POULAIN","PACOME","2.3.4.1","2"],[2010,"2010-08-13","2010-08-20","BENARD","JOSEPHINE","4.2.4","4"],[2010,"2010-08-27","2010-09-03","AUBRY","OMBELINE","2.4.4","2"],[2010,"2010-10-29","2010-11-05","BENARD","RAPHAEL","3.2.6","3"],[2010,"2010-12-17","2010-12-24","COLLET","FAUSTINE","1.6.2.2","1"],[2010,"2010-12-24","2010-12-31","MEUNIER","CYPRIEN","1.5.5.1","1"],[2010,"2010-12-31","2011-01-07","DUMAS","AGLAE","1.2.7","1"],[2011,"2011-02-25","2011-03-04","VIDAL","HONORINE","3.1.8","3"],[2011,"2011-04-22","2011-04-29","GAUTIER","ADELE","4.6.7.2","4"],[2011,"2011-04-29","2011-05-06","BENARD","JOSEPHINE","4.2.4","4"],[2011,"2011-05-20","2011-05-27","BRUN","NINA","3.5.5","3"],[2011,"2011-06-17","2011-06-24","LEMAIRE","ARISTIDE","3.2.1","3"],[2011,"2011-07-01","2011-07-03","GAILLARD","TIPHAINE","5.1.1","5"],[2011,"2011-07-08","2011-07-15","BOUVIER","JOACHIM","5.1.7","5"],[2011,"2011-07-15","2011-07-22","COLLET","FAUSTINE","1.6.2.2","1"],[2011,"2011-07-22","2011-07-29","PICARD","SUZANNE","4.1.9","4"],[2011,"2011-07-29","2011-08-05","LACROIX","LEONIE","4.4.4.3","4"],[2011,"2011-08-12","2011-08-19","GAUTIER","ADELE","4.6.7.2","4"],[2011,"2011-08-19","2011-08-21","LACROIX","TIMOTHEE","5.3.7","5"],[2011,"2011-10-28","2011-11-04","BLANCHARD","FAUSTINE","2.3.5","2"],[2011,"2011-12-02","2011-12-09","ROLLAND","PAULIN","5.4.7","5"],[2011,"2011-12-16","2011-12-23","LACROIX","TIMOTHEE","5.3.7","5"],[2011,"2011-12-23","2011-12-30","WEBER","APOLLINE","4.2.5","4"],[2011,"2011-12-30","2012-01-01","PICARD","SUZANNE","4.1.9","4"],[2012,"2012-01-13","2012-01-20","TEXIER","ANATOLE","1.2.3","1"],[2012,"2012-01-20","2012-01-22","TESSIER","SIXTINE","3.5.6.1","3"],[2012,"2012-02-17","2012-02-19","DUFOUR","OSCAR","4.1.9.1","4"],[2012,"2012-03-09","2012-03-16","COLLET","FAUSTINE","1.6.2.2","1"],[2012,"2012-04-20","2012-04-27","SAUVAGE","CAPUCINE","3.6.1","3"],[2012,"2012-07-06","2012-07-08","ROYER","BLANCHE","3.5.5.1","3"],[2012,"2012-07-13","2012-07-20","BENARD","RAPHAEL","3.2.6","3"],[2012,"2012-07-27","2012-08-03","SAUVAGE","CAPUCINE","3.6.1","3"],[2012,"2012-08-03","2012-08-10","GAUTIER","ADELE","4.6.7.2","4"],[2012,"2012-08-10","2012-08-12","TEXIER","ANATOLE","1.2.3","1"],[2012,"2012-08-24","2012-08-31","BOUVIER","JOACHIM","5.1.7","5"],[2012,"2012-08-31","2012-09-07","BRUN","NINA","3.5.5","3"],[2012,"2012-09-14","2012-09-21","VIDAL","HONORINE","3.1.8","3"],[2012,"2012-09-21","2012-09-28","BOYER","QUITTERIE","4.1.5","4"],[2012,"2012-10-19","2012-10-26","GAILLARD","ESTHER","4.2.4.1","4"],[2012,"2012-10-26","2012-11-02","DUFOUR","OSCAR","4.1.9.1","4"],[2012,"2012-12-07","2012-12-09","BLANCHARD","FAUSTINE","2.3.5","2"],[2012,"2012-12-21","2012-12-28","WEBER","APOLLINE","4.2.5","4"],[2012,"2012-12-28","2013-01-04","LACROIX","LEONIE","4.4.4.3","4"],[2013,"2013-01-18","2013-01-25","PARIS","DAPHNE","5.4.1","5"],[2013,"2013-02-22","2013-02-24","AUBRY","OMBELINE","2.4.4","2"],[2013,"2013-04-05","2013-04-12","LACROIX","TIMOTHEE","5.3.7","5"],[2013,"2013-04-19","2013-04-26","BENARD","RAPHAEL","3.2.6","3"],[2013,"2013-07-05","2013-07-07","FAURE","QUITTERIE","2.3.5.3","2"],[2013,"2013-07-12","2013-07-19","BENARD","RAPHAEL","3.2.6","3"],[2013,"2013-07-19","2013-07-26","GAILLARD","TIPHAINE","5.1.1","5"],[2013,"2013-08-09","2013-08-16","PERRET","ALIENOR","5.3.4","5"],[2013,"2013-08-16","2013-08-23","BOYER","QUITTERIE","4.1.5","4"],[2013,"2013-08-23","2013-08-30","TEXIER","ANATOLE","1.2.3","1"],[2013,"2013-08-30","2013-09-06","BRUN","NINA","3.5.5","3"],[2013,"2013-09-27","2013-10-04","ROLLAND","PAULIN","5.4.7","5"],[2013,"2013-10-04","2013-10-11","AUBRY","OMBELINE","2.4.4","2"],[2014,"2014-01-10","2014-01-17","SAUVAGE","CAPUCINE","3.6.1","3"],[2014,"2014-01-31","2014-02-07","PICARD","SUZANNE","4.1.9","4"],[2014,"2014-02-21","2014-02-28","TESSIER","SIXTINE","3.5.6.1","3"],[2014,"2014-02-28","2014-03-07","ROLLAND","PAULIN","5.4.7","5"],[2014,"2014-04-11","2014-04-18","COLLET","FAUSTINE","1.6.2.2","1"],[2014,"2014-04-18","2014-04-25","TEXIER","EULALIE","2.2.7","2"],[2014,"2014-04-25","2014-05-02","BOYER","QUITTERIE","4.1.5","4"],[2014,"2014-07-04","2014-07-06","PICARD","SUZANNE","4.1.9","4"],[2014,"2014-07-11","2014-07-18","BOUVIER","JOACHIM","5.1.7","5"],[2014,"2014-07-18","2014-07-20","GAILLARD","TIPHAINE","5.1.1","5"],[2014,"2014-08-01","2014-08-08","TESSIER","SIXTINE","3.5.6.1","3"],[2014,"2014-08-08","2014-08-15","DUFOUR","OSCAR","4.1.9.1","4"],[2014,"2014-08-15","2014-08-22","BENARD","JOSEPHINE","4.2.4","4"],[2014,"2014-08-22","2014-08-24","VIDAL","HONORINE","3.1.8","3"],[2014,"2014-08-29","2014-09-05","BENARD","JOSEPHINE","4.2.4","4"],[2014,"2014-09-05","2014-09-12","DUMAS","GASPARD","5.1.4.1","5"],[2014,"2014-09-19","2014-09-26","MAILLARD","MARIUS","3.4.1","3"],[2014,"2014-09-26","2014-10-03","BRUN","NINA","3.5.5","3"],[2014,"2014-10-24","2014-10-31","TEXIER","EULALIE","2.2.7","2"],[2014,"2014-10-31","2014-11-07","LEBRUN","GERVAIS","2.1.2","2"],[2014,"2014-12-05","2014-12-12","VIDAL","HONORINE","3.1.8","3"],[2015,"2015-01-30","2015-02-06","LACROIX","LEONIE","4.4.4.3","4"],[2015,"2015-02-13","2015-02-20","TEXIER","ANATOLE","1.2.3","1"],[2015,"2015-02-27","2015-03-06","DUFOUR","OSCAR","4.1.9.1","4"],[2015,"2015-03-06","2015-03-13","DUMAS","GASPARD","5.1.4.1","5"],[2015,"2015-03-27","2015-04-03","BLANCHARD","AMBROISE","3.5.3","3"],[2015,"2015-04-03","2015-04-10","LEMAIRE","EMILIEN","4.6.1.1","4"],[2015,"2015-04-17","2015-04-19","PICARD","SUZANNE","4.1.9","4"],[2015,"2015-04-24","2015-05-01","BRUN","NINA","3.5.5","3"],[2015,"2015-05-29","2015-06-05","PARIS","ARISTIDE","1.2.2.4","1"],[2015,"2015-07-10","2015-07-17","BENARD","JOSEPHINE","4.2.4","4"],[2015,"2015-07-17","2015-07-24","LEMAIRE","ARISTIDE","3.2.1","3"],[2015,"2015-07-24","2015-07-31","TEXIER","EULALIE","2.2.7","2"],[2015,"2015-07-31","2015-08-02","POULAIN","PACOME","2.3.4.1","2"],[2015,"2015-08-07","2015-08-14","GUILLOT","CORENTIN","2.2.7.2","2"],[2015,"2015-08-14","2015-08-21","GAUTIER","ADELE","4.6.7.2","4"],[2015,"2015-08-21","2015-08-28","CARPENTIER","ABEL","1.2.2.2","1"],[2015,"2015-08-28","2015-09-04","JACQUET","PHILIPPINE","5.4.7.4","5"],[2015,"2015-09-11","2015-09-13","BENARD","JOSEPHINE","4.2.4","4"],[2015,"2015-10-23","2015-10-30","BLANCHARD","FAUSTINE","2.3.5","2"],[2015,"2015-10-30","2015-11-06","ROUSSEL","ANATOLE","5.5.3","5"],[2015,"2015-11-20","2015-11-27","MEUNIER","CYPRIEN","1.5.5.1","1"],[2015,"2015-12-04","2015-12-11","WEBER","APOLLINE","4.2.5","4"],[2015,"2015-12-04","2015-12-11","WEBER","ALBANE","5.6.2.2","5"],[2015,"2015-12-11","2015-12-18","BRUN","NINA","3.5.5","3"],[2015,"2015-12-18","2015-12-25","VIDAL","HONORINE","3.1.8","3"],[2015,"2015-12-25","2015-12-27","DUMAS","AGLAE","1.2.7","1"],[2016,"2016-02-12","2016-02-19","MARCHAND","TIPHAINE","1.4.1","1"],[2016,"2016-02-19","2016-02-26","PARIS","DAPHNE","5.4.1","5"],[2016,"2016-03-18","2016-03-25","TEXIER","EULALIE","2.2.7","2"],[2016,"2016-04-01","2016-04-08","PICARD","SUZANNE","4.1.9","4"],[2016,"2016-04-15","2016-04-22","DUMAS","AGLAE","1.2.7","1"],[2016,"2016-04-22","2016-04-24","JACQUET","PHILIPPINE","5.4.7.4","5"],[2016,"2016-04-29","2016-05-06","GAILLARD","TIPHAINE","5.1.1","5"],[2016,"2016-07-01","2016-07-08","TESSIER","SIXTINE","3.5.6.1","3"],[2016,"2016-07-08","2016-07-15","COLLET","FAUSTINE","1.6.2.2","1"],[2016,"2016-07-15","2016-07-22","FABRE","EVARISTE","1.1.3","1"],[2016,"2016-07-22","2016-07-24","COLLET","FAUSTINE","1.6.2.2","1"],[2016,"2016-08-05","2016-08-07","BOYER","QUITTERIE","4.1.5","4"],[2016,"2016-08-12","2016-08-14","LACROIX","LEONIE","4.4.4.3","4"],[2016,"2016-08-19","2016-08-26","LACROIX","TIMOTHEE","5.3.7","5"],[2016,"2016-08-26","2016-09-02","TEXIER","EULALIE","2.2.7","2"],[2016,"2016-09-23","2016-09-25","MASSON","ARMAND","4.2.9","4"],[2016,"2016-10-28","2016-11-04","LACROIX","LEONIE","4.4.4.3","4"],[2016,"2016-12-09","2016-12-16","PERRET","ALIENOR","5.3.4","5"],[2016,"2016-12-16","2016-12-23","CARPENTIER","ABEL","1.2.2.2","1"],[2016,"2016-12-23","2016-12-30","LACROIX","LEONIE","4.4.4.3","4"],[2017,"2017-02-10","2017-02-17","LECLERC","LOUISE","2.1.4","2"],[2017,"2017-02-17","2017-02-24","BOUVIER","JOACHIM","5.1.7","5"],[2017,"2017-03-31","2017-04-07","SAUVAGE","CAPUCINE","3.6.1","3"],[2017,"2017-04-07","2017-04-14","BOYER","QUITTERIE","4.1.5","4"],[2017,"2017-04-14","2017-04-21","JOLY","LEANDRE","4.4.1.3","4"],[2017,"2017-04-21","2017-04-28","BENARD","RAPHAEL","3.2.6","3"],[2017,"2017-04-28","2017-05-05","FABRE","EVARISTE","1.1.3","1"],[2017,"2017-05-12","2017-05-19","PARIS","ARISTIDE","1.2.2.4","1"],[2017,"2017-06-09","2017-06-16","VIDAL","HONORINE","3.1.8","3"],[2017,"2017-06-23","2017-06-30","WEBER","APOLLINE","4.2.5","4"],[2017,"2017-07-07","2017-07-14","JACQUET","PHILIPPINE","5.4.7.4","5"],[2017,"2017-07-07","2017-07-14","LEMAIRE","EMILIEN","4.6.1.1","4"],[2017,"2017-07-14","2017-07-21","PARIS","ARISTIDE","1.2.2.4","1"],[2017,"2017-07-21","2017-07-28","PICARD","SUZANNE","4.1.9","4"],[2017,"2017-07-28","2017-07-30","JACQUET","PHILIPPINE","5.4.7.4","5"],[2017,"2017-08-11","2017-08-13","LACROIX","LEONIE","4.4.4.3","4"],[2017,"2017-08-18","2017-08-25","PARIS","DAPHNE","5.4.1","5"],[2017,"2017-08-25","2017-09-01","LECLERC","CAPUCINE","1.2.2.1","1"],[2017,"2017-09-08","2017-09-15","WEBER","ALBANE","5.6.2.2","5"],[2017,"2017-09-29","2017-10-06","ROLLAND","PAULIN","5.4.7","5"],[2017,"2017-11-17","2017-11-24","BRUN","VICTOIRE","2.2.8","2"],[2017,"2017-12-29","2018-01-05","PARIS","DAPHNE","5.4.1","5"],[2018,"2018-01-05","2018-01-12","SAUVAGE","CAPUCINE","3.6.1","3"],[2018,"2018-01-19","2018-01-26","PICARD","SUZANNE","4.1.9","4"],[2018,"2018-02-02","2018-02-09","BLANCHARD","AMBROISE","3.5.3","3"],[2018,"2018-02-16","2018-02-18","TEXIER","ANATOLE","1.2.3","1"],[2018,"2018-02-23","2018-03-02","TESSIER","SIXTINE","3.5.6.1","3"],[2018,"2018-04-13","2018-04-15","BENARD","RAPHAEL","3.2.6","3"],[2018,"2018-04-27","2018-05-04","BLANCHARD","AMBROISE","3.5.3","3"],[2018,"2018-05-11","2018-05-18","LACROIX","TIMOTHEE","5.3.7","5"],[2018,"2018-06-15","2018-06-22","TEXIER","EULALIE","2.2.7","2"],[2018,"2018-07-06","2018-07-13","PERRET","ALIENOR","5.3.4","5"],[2018,"2018-07-20","2018-07-27","LACROIX","TIMOTHEE","5.3.7","5"],[2018,"2018-08-03","2018-08-10","MARCHAND","TIPHAINE","1.4.1","1"],[2018,"2018-08-10","2018-08-12","LACROIX","LEONIE","4.4.4.3","4"],[2018,"2018-08-24","2018-08-31","RIVIERE","ADELE","3.1.9","3"],[2018,"2018-08-31","2018-09-07","FABRE","EVARISTE","1.1.3","1"],[2018,"2018-10-19","2018-10-26","DUMAS","GASPARD","5.1.4.1","5"],[2018,"2018-12-21","2018-12-23","LACROIX","LEONIE","4.4.4.3","4"],[2018,"2018-12-28","2019-01-04","BRUN","VICTOIRE","2.2.8","2"],[2019,"2019-02-08","2019-02-15","CHEVALIER","EDGAR","5.6.2","5"],[2019,"2019-02-15","2019-02-17","BENARD","JOSEPHINE","4.2.4","4"],[2019,"2019-02-22","2019-03-01","WEBER","ALBANE","5.6.2.2","5"],[2019,"2019-03-22","2019-03-29","GUILLOT","CORENTIN","2.2.7.2","2"],[2019,"2019-03-22","2019-03-29","LEMAIRE","EMILIEN","4.6.1.1","4"],[2019,"2019-04-05","2019-04-12","PICARD","SUZANNE","4.1.9","4"],[2019,"2019-04-12","2019-04-19","LECLERC","CAPUCINE","1.2.2.1","1"],[2019,"2019-04-26","2019-05-03","PICARD","SUZANNE","4.1.9","4"],[2019,"2019-05-10","2019-05-17","COLIN","LEANDRE","5.1.3","5"],[2019,"2019-06-21","2019-06-28","LACROIX","TIMOTHEE","5.3.7","5"],[2019,"2019-06-28","2019-07-05","JACQUET","PHILIPPINE","5.4.7.4","5"],[2019,"2019-07-05","2019-07-12","BOUVIER","JOACHIM","5.1.7","5"],[2019,"2019-08-02","2019-08-09","RIVIERE","ADELE","3.1.9","3"],[2019,"2019-08-09","2019-08-16","LEMAIRE","ARISTIDE","3.2.1","3"],[2019,"2019-08-16","2019-08-18","SAUVAGE","CAPUCINE","3.6.1","3"],[2019,"2019-08-23","2019-08-30","VIDAL","HONORINE","3.1.8","3"],[2019,"2019-08-30","2019-09-06","BOYER","QUITTERIE","4.1.5","4"],[2019,"2019-09-13","2019-09-20","SAUVAGE","CAPUCINE","3.6.1","3"],[2019,"2019-10-25","2019-11-01","SAUVAGE","CAPUCINE","3.6.1","3"],[2019,"2019-11-08","2019-11-15","GAUTIER","ADELE","4.6.7.2","4"],[2019,"2019-12-06","2019-12-13","PARIS","ARISTIDE","1.2.2.4","1"],[2019,"2019-12-20","2019-12-22","MARCHAND","TIPHAINE","1.4.1","1"],[2019,"2019-12-27","2020-01-03","BENARD","RAPHAEL","3.2.6","3"],[2020,"2020-01-10","2020-01-17","PICARD","SUZANNE","4.1.9","4"],[2020,"2020-03-13","2020-03-20","TEXIER","ANATOLE","1.2.3","1"],[2020,"2020-04-03","2020-04-10","BOYER","QUITTERIE","4.1.5","4"],[2020,"2020-04-17","2020-04-24","BOYER","QUITTERIE","4.1.5","4"],[2020,"2020-04-24","2020-04-26","ROLLAND","PAULIN","5.4.7","5"],[2020,"2020-05-08","2020-05-15","VIDAL","HONORINE","3.1.8","3"],[2020,"2020-05-15","2020-05-22","GUILLOT","CORENTIN","2.2.7.2","2"],[2020,"2020-06-05","2020-06-12","PICARD","SUZANNE","4.1.9","4"],[2020,"2020-07-03","2020-07-10","BRUN","NINA","3.5.5","3"],[2020,"2020-07-17","2020-07-24","JACQUET","PHILIPPINE","5.4.7.4","5"],[2020,"2020-07-24","2020-07-31","BRUN","NINA","3.5.5","3"],[2020,"2020-08-07","2020-08-14","ROLLAND","PAULIN","5.4.7","5"],[2020,"2020-08-14","2020-08-21","DUFOUR","OSCAR","4.1.9.1","4"],[2020,"2020-08-21","2020-08-28","PICARD","SUZANNE","4.1.9","4"],[2020,"2020-08-28","2020-09-04","BENARD","JOSEPHINE","4.2.4","4"],[2020,"2020-09-11","2020-09-13","DUMAS","AGLAE","1.2.7","1"],[2020,"2020-10-09","2020-10-16","BRUN","NINA","3.5.5","3"],[2020,"2020-10-30","2020-11-06","TEXIER","EULALIE","2.2.7","2"],[2020,"2020-12-25","2021-01-01","BARBIER","EDGAR","2.3.6","2"],[2021,"2021-01-01","2021-01-03","VIDAL","HONORINE","3.1.8","3"],[2021,"2021-04-02","2021-04-09","TEXIER","EULALIE","2.2.7","2"],[2021,"2021-04-23","2021-04-25","TEXIER","EULALIE","2.2.7","2"],[2021,"2021-04-30","2021-05-07","BOYER","QUITTERIE","4.1.5","4"],[2021,"2021-05-28","2021-05-30","BOUVIER","JOACHIM","5.1.7","5"],[2021,"2021-07-02","2021-07-09","TESSIER","SIXTINE","3.5.6.1","3"],[2021,"2021-07-16","2021-07-23","COLIN","LEANDRE","5.1.3","5"],[2021,"2021-07-30","2021-08-06","RIVIERE","ADELE","3.1.9","3"],[2021,"2021-08-06","2021-08-13","PARIS","DAPHNE","5.4.1","5"],[2021,"2021-08-13","2021-08-20","MARCHAND","TIPHAINE","1.4.1","1"],[2021,"2021-08-20","2021-08-27","BOYER","QUITTERIE","4.1.5","4"],[2021,"2021-08-27","2021-09-03","SAUVAGE","CAPUCINE","3.6.1","3"],[2021,"2021-09-10","2021-09-17","MARCHAND","TIPHAINE","1.4.1","1"],[2021,"2021-09-17","2021-09-24","PARIS","DAPHNE","5.4.1","5"],[2021,"2021-10-08","2021-10-15","JACQUET","PHILIPPINE","5.4.7.4","5"],[2021,"2021-10-15","2021-10-22","DUMAS","AGLAE","1.2.7","1"],[2021,"2021-10-29","2021-11-05","PARIS","DAPHNE","5.4.1","5"],[2021,"2021-11-05","2021-11-12","BRUN","NINA","3.5.5","3"],[2021,"2021-12-10","2021-12-17","COLLET","FAUSTINE","1.6.2.2","1"],[2021,"2021-12-24","2021-12-31","PICARD","SUZANNE","4.1.9","4"],[2022,"2022-02-04","2022-02-11","SAUVAGE","CAPUCINE","3.6.1","3"],[2022,"2022-02-11","2022-02-13","BENARD","RAPHAEL","3.2.6","3"],[2022,"2022-02-18","2022-02-25","BRUN","NINA","3.5.5","3"],[2022,"2022-04-01","2022-04-08","SAUVAGE","CAPUCINE","3.6.1","3"],[2022,"2022-04-15","2022-04-22","TESSIER","SIXTINE","3.5.6.1","3"],[2022,"2022-04-29","2022-05-06","TEXIER","EULALIE","2.2.7","2"],[2022,"2022-05-27","2022-06-03","POULAIN","PACOME","2.3.4.1","2"],[2022,"2022-06-03","2022-06-05","COLLET","FAUSTINE","1.6.2.2","1"],[2022,"2022-06-17","2022-06-19","JOLY","LEANDRE","4.4.1.3","4"],[2022,"2022-07-01","2022-07-03","BENARD","JOSEPHINE","4.2.4","4"],[2022,"2022-07-08","2022-07-15","CHEVALIER","EDGAR","5.6.2","5"],[2022,"2022-07-15","2022-07-22","GAUTIER","ADELE","4.6.7.2","4"],[2022,"2022-07-22","2022-07-29","COLLET","FAUSTINE","1.6.2.2","1"],[2022,"2022-07-29","2022-08-05","LEBRUN","GERVAIS","2.1.2","2"],[2022,"2022-08-12","2022-08-19","ROLLAND","PAULIN","5.4.7","5"],[2022,"2022-08-19","2022-08-21","GUILLOT","CORENTIN","2.2.7.2","2"],[2022,"2022-08-26","2022-09-02","BENARD","JOSEPHINE","4.2.4","4"],[2022,"2022-09-30","2022-10-07","AUBRY","OMBELINE","2.4.4","2"],[2022,"2022-10-07","2022-10-14","MARCHAND","TIPHAINE","1.4.1","1"],[2022,"2022-10-28","2022-11-04","COLIN","LEANDRE","5.1.3","5"],[2022,"2022-12-23","2022-12-25","BLANCHARD","FAUSTINE","2.3.5","2"],[2023,"2023-02-10","2023-02-17","GAUTIER","ADELE","4.6.7.2","4"],[2023,"2023-02-17","2023-02-24","BOUVIER","JOACHIM","5.1.7","5"],[2023,"2023-03-17","2023-03-19","LACROIX","TIMOTHEE","5.3.7","5"],[2023,"2023-04-14","2023-04-21","TESSIER","SIXTINE","3.5.6.1","3"],[2023,"2023-04-21","2023-04-28","WEBER","APOLLINE","4.2.5","4"],[2023,"2023-04-28","2023-05-05","TEXIER","ANATOLE","1.2.3","1"],[2023,"2023-05-12","2023-05-14","FLEURY","VICTOIRE","2.4.6","2"],[2023,"2023-05-26","2023-06-02","DUFOUR","OSCAR","4.1.9.1","4"],[2023,"2023-06-09","2023-06-16","PARIS","DAPHNE","5.4.1","5"],[2023,"2023-06-30","2023-07-07","LACROIX","TIMOTHEE","5.3.7","5"],[2023,"2023-07-07","2023-07-14","PARIS","DAPHNE","5.4.1","5"],[2023,"2023-07-21","2023-07-28","SAUVAGE","CAPUCINE","3.6.1","3"],[2023,"2023-07-28","2023-07-30","TEXIER","ANATOLE","1.2.3","1"],[2023,"2023-08-04","2023-08-11","GAUTIER","ADELE","4.6.7.2","4"],[2023,"2023-08-11","2023-08-18","WEBER","APOLLINE","4.2.5","4"],[2023,"2023-08-25","2023-09-01","LEMAIRE","ARISTIDE","3.2.1","3"],[2023,"2023-09-15","2023-09-22","SAUVAGE","CAPUCINE","3.6.1","3"],[2023,"2023-10-20","2023-10-27","TEXIER","ANATOLE","1.2.3","1"],[2023,"2023-11-03","2023-11-10","JACQUET","PHILIPPINE","5.4.7.4","5"],[2023,"2023-12-15","2023-12-22","SAUVAGE","CAPUCINE","3.6.1","3"],[2023,"2023-12-22","2023-12-29","COLLET","FAUSTINE","1.6.2.2","1"],[2023,"2023-12-29","2023-12-31","SAUVAGE","CAPUCINE","3.6.1","3"],[2024,"2024-01-12","2024-01-19","BOYER","QUITTERIE","4.1.5","4"],[2024,"2024-02-09","2024-02-16","GUILLOT","CORENTIN","2.2.7.2","2"],[2024,"2024-02-16","2024-02-23","DUFOUR","OSCAR","4.1.9.1","4"],[2024,"2024-02-23","2024-03-01","TEXIER","ANATOLE","1.2.3","1"],[2024,"2024-03-22","2024-03-29","DUMAS","GASPARD","5.1.4.1","5"],[2024,"2024-04-12","2024-04-19","PARIS","DAPHNE","5.4.1","5"],[2024,"2024-04-19","2024-04-21","PICARD","SUZANNE","4.1.9","4"],[2024,"2024-04-26","2024-05-03","TESSIER","SIXTINE","3.5.6.1","3"],[2024,"2024-07-05","2024-07-12","JACQUET","PHILIPPINE","5.4.7.4","5"],[2024,"2024-07-19","2024-07-26","BENARD","JOSEPHINE","4.2.4","4"],[2024,"2024-07-26","2024-08-02","ROLLAND","PAULIN","5.4.7","5"],[2024,"2024-08-02","2024-08-09","LACROIX","LEONIE","4.4.4.3","4"],[2024,"2024-08-09","2024-08-16","LACROIX","LEONIE","4.4.4.3","4"],[2024,"2024-08-23","2024-08-30","TEXIER","ANATOLE","1.2.3","1"],[2024,"2024-09-06","2024-09-08","LACROIX","LEONIE","4.4.4.3","4"],[2024,"2024-09-27","2024-10-04","VIDAL","HONORINE","3.1.8","3"],[2024,"2024-10-25","2024-11-01","BENARD","RAPHAEL","3.2.6","3"],[2024,"2024-12-13","2024-12-20","BOYER","QUITTERIE","4.1.5","4"],[2024,"2024-12-20","2024-12-27","LACROIX","TIMOTHEE","5.3.7","5"],[2024,"2024-12-27","2024-12-29","VIDAL","HONORINE","3.1.8","3"],[2025,"2025-01-03","2025-01-10","ROYER","BLANCHE","3.5.5.1","3"],[2025,"2025-01-24","2025-01-31","TEXIER","ANATOLE","1.2.3","1"],[2025,"2025-02-14","2025-02-16","SAUVAGE","CAPUCINE","3.6.1","3"],[2025,"2025-02-21","2025-02-28","JACQUET","PHILIPPINE","5.4.7.4","5"],[2025,"2025-02-28","2025-03-07","BRUN","NINA","3.5.5","3"],[2025,"2025-04-04","2025-04-11","BRUN","NINA","3.5.5","3"],[2025,"2025-04-25","2025-04-27","PERRET","ALIENOR","5.3.4","5"],[2025,"2025-05-09","2025-05-16","BLANCHARD","FAUSTINE","2.3.5","2"],[2025,"2025-07-04","2025-07-06","ROLLAND","PAULIN","5.4.7","5"],[2025,"2025-07-11","2025-07-13","TESSIER","SIXTINE","3.5.6.1","3"],[2025,"2025-07-18","2025-07-25","DUFOUR","OSCAR","4.1.9.1","4"],[2025,"2025-07-25","2025-08-01","BRUN","NINA","3.5.5","3"],[2025,"2025-08-01","2025-08-03","LACROIX","LEONIE","4.4.4.3","4"],[2025,"2025-08-08","2025-08-10","TEXIER","ANATOLE","1.2.3","1"],[2025,"2025-08-15","2025-08-22","MAILLARD","MARIUS","3.4.1","3"],[2025,"2025-08-29","2025-09-05","TESSIER","SIXTINE","3.5.6.1","3"],[2025,"2025-10-24","2025-10-31","VIDAL","HONORINE","3.1.8","3"],[2025,"2025-10-31","2025-11-07","TEXIER","EULALIE","2.2.7","2"],[2025,"2025-12-19","2025-12-26","BRUN","NINA","3.5.5","3"],[2025,"2025-12-26","2025-12-28","COLLET","FAUSTINE","1.6.2.2","1"],[2026,"2026-02-13","2026-02-15","FABRE","EVARISTE","1.1.3","1"],[2026,"2026-02-27","2026-03-06","VIDAL","HONORINE","3.1.8","3"],[2026,"2026-03-20","2026-03-27","ROLLAND","PAULIN","5.4.7","5"],[2026,"2026-04-17","2026-04-24","VIDAL","HONORINE","3.1.8","3"],[2026,"2026-04-24","2026-05-01","BRUN","NINA","3.5.5","3"],[2026,"2026-05-01","2026-05-08","PERRET","ALIENOR","5.3.4","5"],[2026,"2026-06-19","2026-06-26","AUBRY","OMBELINE","2.4.4","2"],[2026,"2026-07-03","2026-07-10","PARIS","DAPHNE","5.4.1","5"],[2026,"2026-07-03","2026-07-10","BENARD","JOSEPHINE","4.2.4","4"],[2026,"2026-07-10","2026-07-12","TEXIER","EULALIE","2.2.7","2"],[2026,"2026-07-10","2026-07-17","LACROIX","TIMOTHEE","5.3.7","5"],[2026,"2026-07-17","2026-07-19","TESSIER","SIXTINE","3.5.6.1","3"],[2026,"2026-07-17","2026-07-24","DUMAS","AGLAE","1.2.7","1"],[2026,"2026-07-24","2026-07-31","WEBER","APOLLINE","4.2.5","4"],[2026,"2026-07-24","2026-07-31","TEXIER","EULALIE","2.2.7","2"],[2026,"2026-07-31","2026-08-07","BRUN","NINA","3.5.5","3"],[2026,"2026-08-07","2026-08-09","DUMAS","AGLAE","1.2.7","1"],[2026,"2026-08-07","2026-08-14","PICARD","SUZANNE","4.1.9","4"],[2026,"2026-08-21","2026-08-28","MAILLARD","MARIUS","3.4.1","3"],[2026,"2026-08-28","2026-09-04","MAILLARD","MARIUS","3.4.1","3"],[2026,"2026-09-25","2026-09-27","RIVIERE","ADELE","3.1.9","3"],[2026,"2026-10-02","2026-10-09","JACQUET","PHILIPPINE","5.4.7.4","5"],[2026,"2026-10-23","2026-10-30","JOLY","LEANDRE","4.4.1.3","4"],[2026,"2026-12-04","2026-12-11","JACQUET","PHILIPPINE","5.4.7.4","5"]],"refus":[[2022,"WEBER","ALBANE","5.6.2.2"],[2022,"BLANCHARD","AMBROISE","3.5.3"],[2022,"POULAIN","PACOME","2.3.4.1"],[2022,"BRUN","NINA","3.5.5"],[2022,"FAURE","QUITTERIE","2.3.5.3"],[2023,"LEMAIRE","EMILIEN","4.6.1.1"],[2023,"LECLERC","LOUISE","2.1.4"],[2023,"CHARPENTIER","BERENICE","1.3.3"],[2023,"COLLET","FAUSTINE","1.6.2.2"],[2023,"BRUN","VICTOIRE","2.2.8"],[2024,"LEMAIRE","EMILIEN","4.6.1.1"],[2024,"LECLERC","LOUISE","2.1.4"],[2024,"PARIS","DAPHNE","5.4.1"],[2024,"FABRE","EVARISTE","1.1.3"],[2024,"TEXIER","EULALIE","2.2.7"],[2025,"WEBER","ALBANE","5.6.2.2"],[2025,"PARIS","ARISTIDE","1.2.2.4"],[2025,"WEBER","APOLLINE","4.2.5"],[2025,"FABRE","EVARISTE","1.1.3"],[2025,"ROUSSEL","ANATOLE","5.5.3"],[2025,"CHEVALIER","LEONTINE","1.5.2"],[2026,"WEBER","ALBANE","5.6.2.2"],[2026,"BLANCHARD","AMBROISE","3.5.3"],[2026,"BRUN","NINA","3.5.5"],[2026,"HUET","MARCEAU","4.5.5"],[2026,"ROLLAND","PAULIN","5.4.7"]],"foyers":[{"corresp":"Isaure","branche":"(1) Aulne","horodateur":"2026-09-11 19:45:57","email":"","nom":"Chevalier","prenom":"Léontine et Mahaut","option":"Non","commentaire":"","choix":[["2027-09-10","2027-09-17"],["2027-09-17","2027-09-24"],null]},{"corresp":"Firmin","branche":"(2) Bouleau","horodateur":"2026-10-03 16:31:59","email":"","nom":"Marchand","prenom":"Noé","option":"Non","commentaire":"","choix":[["2027-07-30","2027-08-06"],["2027-08-13","2027-08-20"],["2027-08-06","2027-08-13"]]},{"corresp":"Solène","branche":"(3) Chêne","horodateur":"2026-10-17 13:06:46","email":"","nom":"Faure","prenom":"Théodore et Lison","option":"Oui","commentaire":"Si possible la semaine complète.","choix":[["2027-10-22","2027-10-29"],["2027-05-21","2027-05-23"],null]},{"corresp":"Octave","branche":"(4) Hêtre","horodateur":"2026-10-24 08:04:24","email":"","nom":"Lemaire","prenom":"Émilien","option":"Non","commentaire":"","choix":[["2027-11-12","2027-11-19"],["2027-03-12","2027-03-19"],null]},{"corresp":"Clotilde","branche":"(5) Tilleul","horodateur":"2026-09-07 15:20:22","email":"","nom":"Weber","prenom":"Albane","option":"Oui","commentaire":"","choix":[["2027-04-23","2027-04-30"],null,null]},{"corresp":"Isaure","branche":"(1) Aulne","horodateur":"2026-10-20 11:59:07","email":"","nom":"Paris","prenom":"Aristide","option":"","commentaire":"","choix":[["2027-11-12","2027-11-19"],["2027-06-18","2027-06-25"],["2027-09-03","2027-09-10"]]},{"corresp":"Firmin","branche":"(2) Bouleau","horodateur":"2026-09-18 11:18:14","email":"","nom":"Leclerc","prenom":"Louise","option":"Oui","commentaire":"Première venue avec nos petits-enfants.","choix":[["2027-07-23","2027-07-30"],["2027-08-13","2027-08-20"],["2027-07-16","2027-07-23"]]},{"corresp":"Solène","branche":"(3) Chêne","horodateur":"2026-10-05 15:08:15","email":"","nom":"Blanchard","prenom":"Ambroise et Jules","option":"Oui","commentaire":"Nous serons six, dont deux enfants.","choix":[["2027-04-16","2027-04-23"],["2027-04-02","2027-04-09"],["2027-04-09","2027-04-16"]]},{"corresp":"Octave","branche":"(4) Hêtre","horodateur":"2026-10-07 22:53:33","email":"","nom":"Benard","prenom":"Joséphine et Côme","option":"Non","commentaire":"","choix":[["2027-10-22","2027-10-29"],["2027-10-29","2027-11-05"],["2027-03-05","2027-03-07"]]},{"corresp":"Clotilde","branche":"(5) Tilleul","horodateur":"2026-09-25 10:41:44","email":"","nom":"Lacroix","prenom":"Timothée (demande formulée par sa sœur)","option":"Oui","commentaire":"","choix":[["2027-08-06","2027-08-13"],["2027-07-09","2027-07-16"],["2027-05-21","2027-05-23"]]},{"corresp":"Isaure","branche":"(1) Aulne","horodateur":"2026-10-24 21:11:55","email":"","nom":"Dumas","prenom":"Aglaé","option":"Oui","commentaire":"","choix":[["2027-04-09","2027-04-16"],["2027-04-16","2027-04-23"],["2027-04-23","2027-04-30"]]},{"corresp":"Firmin","branche":"(2) Bouleau","horodateur":"2026-10-26 11:15:01","email":"","nom":"Texier","prenom":"Eulalie et Agathe","option":"Non","commentaire":"Si possible la semaine complète.","choix":[["2027-10-29","2027-11-05"],["2027-03-05","2027-03-07"],null]},{"corresp":"Solène","branche":"(3) Chêne","horodateur":"2026-10-01 20:02:14","email":"","nom":"Brun","prenom":"Nina et Jacinthe","option":"Oui","commentaire":"","choix":[["2027-10-22","2027-10-29"],["2027-03-05","2027-03-07"],null]},{"corresp":"Octave","branche":"(4) Hêtre","horodateur":"2026-10-24 09:40:04","email":"","nom":"Picard","prenom":"Suzanne","option":"","commentaire":"Si possible la semaine complète.","choix":[["2027-07-30","2027-08-06"],["2027-07-09","2027-07-16"],["2027-07-16","2027-07-23"]]},{"corresp":"Clotilde","branche":"(5) Tilleul","horodateur":"2026-09-01 13:06:01","email":"","nom":"Gaillard","prenom":"Tiphaine","option":"","commentaire":"Nous serons six, dont deux enfants.","choix":[["2027-07-02","2027-07-09"],["2027-08-06","2027-08-13"],["2027-08-13","2027-08-20"]]},{"corresp":"Isaure","branche":"(1) Aulne","horodateur":"2026-09-04 08:31:34","email":"","nom":"Colin","prenom":"Ulysse","option":"Non","commentaire":"","choix":[["2027-09-10","2027-09-17"],["2027-06-18","2027-06-25"],["2027-09-24","2027-09-26"]]},{"corresp":"Firmin","branche":"(2) Bouleau","horodateur":"2026-10-21 11:41:29","email":"","nom":"Poulain","prenom":"Pacôme et Lucien","option":"Non","commentaire":"Nous pouvons décaler au week-end suivant si besoin.","choix":[["2027-07-23","2027-07-30"],["2027-07-02","2027-07-09"],["2027-10-08","2027-10-10"]]},{"corresp":"Solène","branche":"(3) Chêne","horodateur":"2026-09-14 12:22:09","email":"","nom":"Tessier","prenom":"Sixtine et Maxence","option":"Oui","commentaire":"Première venue avec nos petits-enfants.","choix":[["2027-07-09","2027-07-16"],["2027-08-13","2027-08-20"],["2027-08-06","2027-08-13"]]},{"corresp":"Octave","branche":"(4) Hêtre","horodateur":"2026-09-14 14:47:23","email":"","nom":"Dufour","prenom":"Oscar et Wandrille","option":"Non","commentaire":"","choix":[["2027-07-23","2027-07-30"],["2027-07-02","2027-07-09"],null]},{"corresp":"Clotilde","branche":"(5) Tilleul","horodateur":"2026-09-05 18:22:45","email":"","nom":"Jacquet","prenom":"Philippine","option":"Non","commentaire":"Pour les 70 ans de notre mère, avec toute la famille.","choix":[["2027-07-02","2027-07-09"],["2027-07-30","2027-08-06"],["2027-07-09","2027-07-16"]]},{"corresp":"Isaure","branche":"(1) Aulne","horodateur":"2026-10-17 21:11:58","email":"","nom":"Meunier","prenom":"Cyprien et Daphné","option":"Non","commentaire":"Première venue avec nos petits-enfants.","choix":[["2027-06-04","2027-06-11"],["2027-09-03","2027-09-10"],["2027-06-25","2027-06-27"]]},{"corresp":"Firmin","branche":"(2) Bouleau","horodateur":"2026-09-20 15:20:22","email":"","nom":"Guillot","prenom":"Corentin et Capucine","option":"Non","commentaire":"Si possible la semaine complète.","choix":[["2027-08-20","2027-08-27"],["2027-07-23","2027-07-30"],null]},{"corresp":"Solène","branche":"(3) Chêne","horodateur":"2026-10-07 17:19:35","email":"","nom":"Riviere","prenom":"Adèle","option":"Non","commentaire":"","choix":[["2027-08-06","2027-08-13"],["2027-08-20","2027-08-27"],["2027-07-09","2027-07-16"]]},{"corresp":"Octave","branche":"(4) Hêtre","horodateur":"2026-10-10 17:42:26","email":"","nom":"Joly","prenom":"Léandre","option":"","commentaire":"Si possible la semaine complète.","choix":[["2027-07-30","2027-08-06"],["2027-08-20","2027-08-27"],["2027-06-25","2027-06-27"]]},{"corresp":"Clotilde","branche":"(5) Tilleul","horodateur":"2026-09-28 15:15:23","email":"","nom":"Bouvier","prenom":"Joachim et Félix","option":"Oui","commentaire":"","choix":[["2027-04-09","2027-04-16"],["2027-04-02","2027-04-09"],["2027-04-16","2027-04-23"]]},{"corresp":"Isaure","branche":"(1) Aulne","horodateur":"2026-10-27 20:32:53","email":"","nom":"Fabre","prenom":"Évariste","option":"Non","commentaire":"Si possible la semaine complète.","choix":[["2027-11-12","2027-11-19"],["2027-09-10","2027-09-17"],["2027-06-04","2027-06-11"]]},{"corresp":"Firmin","branche":"(2) Bouleau","horodateur":"2026-10-07 21:54:30","email":"","nom":"Aubry","prenom":"Ombeline et Armance","option":"Non","commentaire":"Première venue avec nos petits-enfants.","choix":[["2027-07-09","2027-07-16"],["2027-08-20","2027-08-27"],["2027-08-06","2027-08-13"]]},{"corresp":"Solène","branche":"(3) Chêne","horodateur":"2026-09-19 09:59:37","email":"","nom":"Royer","prenom":"Blanche","option":"Non","commentaire":"","choix":[["2027-08-06","2027-08-13"],["2027-09-24","2027-09-26"],null]},{"corresp":"Octave","branche":"(4) Hêtre","horodateur":"2026-10-27 21:39:13","email":"","nom":"Masson","prenom":"Armand","option":"","commentaire":"Si possible la semaine complète.","choix":[["2027-10-29","2027-11-05"],["2027-10-22","2027-10-29"],["2027-03-05","2027-03-07"]]},{"corresp":"Clotilde","branche":"(5) Tilleul","horodateur":"2026-10-15 16:49:33","email":"","nom":"Roussel","prenom":"Anatole","option":"Non","commentaire":"Nous pouvons décaler au week-end suivant si besoin.","choix":[["2027-08-06","2027-08-13"],["2027-07-02","2027-07-09"],["2027-08-20","2027-08-27"]]},{"corresp":"Isaure","branche":"(1) Aulne","horodateur":"2026-09-22 15:08:17","email":"","nom":"Carpentier","prenom":"Abel et Apolline","option":"","commentaire":"Nous pouvons décaler au week-end suivant si besoin.","choix":[["2027-04-09","2027-04-16"],["2027-04-02","2027-04-09"],["2027-04-16","2027-04-23"]]},{"corresp":"Firmin","branche":"(2) Bouleau","horodateur":"2026-09-23 19:03:39","email":"","nom":"Lebrun","prenom":"Gervais","option":"Non","commentaire":"","choix":[["2027-07-23","2027-07-30"],["2027-09-24","2027-09-26"],null]},{"corresp":"Solène","branche":"(3) Chêne","horodateur":"2026-09-16 16:04:27","email":"","nom":"Vidal","prenom":"Honorine et Bastien","option":"","commentaire":"","choix":[["2027-04-09","2027-04-16"],["2027-04-23","2027-04-30"],null]},{"corresp":"Octave","branche":"(4) Hêtre","horodateur":"2026-10-03 09:59:59","email":"","nom":"Huet","prenom":"Marceau et Esther","option":"Oui","commentaire":"Si possible la semaine complète.","choix":[["2027-08-13","2027-08-20"],["2027-07-09","2027-07-16"],["2027-07-16","2027-07-23"]]},{"corresp":"Clotilde","branche":"(5) Tilleul","horodateur":"2026-10-18 09:51:30","email":"","nom":"Rolland","prenom":"Paulin","option":"Oui","commentaire":"Nous pouvons décaler au week-end suivant si besoin.","choix":[["2027-06-11","2027-06-18"],["2027-06-18","2027-06-25"],["2027-09-17","2027-09-24"]]},{"corresp":"Isaure","branche":"(1) Aulne","horodateur":"2026-09-22 15:54:16","email":"","nom":"Charpentier","prenom":"Bérénice","option":"Oui","commentaire":"Si possible la semaine complète.","choix":[["2027-08-06","2027-08-13"],["2027-08-20","2027-08-27"],null]},{"corresp":"Firmin","branche":"(2) Bouleau","horodateur":"2026-09-18 13:04:04","email":"","nom":"Barbier","prenom":"Edgar","option":"Oui","commentaire":"Pour les 70 ans de notre mère, avec toute la famille.","choix":[["2027-10-29","2027-11-05"],["2027-10-22","2027-10-29"],null]},{"corresp":"Solène","branche":"(3) Chêne","horodateur":"2026-09-18 13:10:45","email":"","nom":"Maillard","prenom":"Marius","option":"","commentaire":"","choix":[["2027-06-04","2027-06-11"],["2027-06-18","2027-06-25"],["2027-03-05","2027-03-07"]]},{"corresp":"Octave","branche":"(4) Hêtre","horodateur":"2026-10-05 14:24:42","email":"","nom":"Boyer","prenom":"Quitterie","option":"","commentaire":"Première venue avec nos petits-enfants.","choix":[["2027-10-29","2027-11-05"],null,null]},{"corresp":"Clotilde","branche":"(5) Tilleul","horodateur":"2026-10-28 10:23:51","email":"","nom":"Perret","prenom":"Aliénor et Zoé","option":"Non","commentaire":"","choix":[["2027-08-13","2027-08-20"],["2027-07-02","2027-07-09"],["2027-07-16","2027-07-23"]]},{"corresp":"Isaure","branche":"(1) Aulne","horodateur":"2026-10-28 16:07:36","email":"","nom":"Collet","prenom":"Faustine et Fanny","option":"Non","commentaire":"Souples d'un ou deux jours sur les dates.","choix":[["2027-12-24","2027-12-26"],["2027-12-17","2027-12-24"],null]},{"corresp":"Firmin","branche":"(2) Bouleau","horodateur":"2026-09-28 16:02:41","email":"","nom":"Fleury","prenom":"Victoire et Ambroise","option":"","commentaire":"Si possible la semaine complète.","choix":[["2027-08-06","2027-08-20"],["2027-06-14","2027-06-18"],null]},{"corresp":"Solène","branche":"(3) Chêne","horodateur":"2026-09-28 14:34:04","email":"","nom":"Sauvage","prenom":"Capucine et Albane","option":"Oui","commentaire":"Pour les 70 ans de notre mère, avec toute la famille.","choix":[["2027-11-12","2027-11-19"],null,null]},{"corresp":"Octave","branche":"(4) Hêtre","horodateur":"2026-10-01 09:00:26","email":"","nom":"Gautier","prenom":"Adèle et Noé","option":"","commentaire":"","choix":[["2027-07-09","2027-07-16"],["2027-07-16","2027-07-23"],["2027-09-03","2027-09-10"]]}]};
+
+/* ═══════════════ MOTEUR (calculs purs, sans affichage) ═══════════════ */
+const ENGINE = (() => {
+  const N = CONFIG.annee;
+  const VAC = CONFIG.vacances;
+  const NOM_VAC = CONFIG.nomsVacances;
+  const FER = new Set(CONFIG.feries);
+  const GRILLE = CONFIG.grille;
+  const LIB_FORMULE = {sem_vac:'semaine en vacances', sem_hors:'semaine hors vacances', we:'week-end', mw:'middle week'};
+  const NOTES = {aucun:0, horsVacN2N3:1, vacN2N3:2, horsVacN1:3, vacN1:4};
+  const LIB_CAT = {aucun:`aucun séjour depuis ${N-3}`, horsVacN2N3:`séjour hors vacances en ${N-3} ou ${N-2}`, vacN2N3:`séjour en vacances en ${N-3} ou ${N-2}`, horsVacN1:`séjour hors vacances en ${N-1}`, vacN1:`séjour en vacances en ${N-1}`};
+  const STOP = new Set(['NEE','ET','DE','DU','LA','LE','DES','EP','DEMANDE','FORMULEE','PAR']);
+  const CRITERES = {
+    semaine:   {lib:'semaine complète', val:(x,f)=> x.semaine?0:1},
+    premier:   {lib:'premier séjour', val:(x,f)=> f.nb===0?0:1},
+    anciennete:{lib:'ancienneté du dernier séjour', val:(x,f)=> f.an||0},
+    service:   {lib:'service rendu', val:(x,f)=> f.service?0:1},
+  };
+
+  // ── Dates (UTC, ISO aaaa-mm-jj) ──
+  const D = iso => Date.UTC(+iso.slice(0,4), +iso.slice(5,7)-1, +iso.slice(8,10));
+  const ISO = t => new Date(t).toISOString().slice(0,10);
+  const plus = (iso,n) => ISO(D(iso)+n*864e5);
+  const nuits = (d,f) => Math.round((D(f)-D(d))/864e5);
+  const jsem = iso => (new Date(D(iso)).getUTCDay()+6)%7;   // lundi = 0 … dimanche = 6
+  const invac = iso => VAC.some(([a,b]) => a<=iso && iso<=b);
+  function nuitsVac(d,f){ const n=nuits(d,f); let v=0; for(let i=0;i<n;i++) if(invac(plus(d,i))) v++; return [v,n]; }
+  function estVacSejour(d,f){ if(!d) return false; if(!f||f<=d) return invac(d); const [v,n]=nuitsVac(d,f); return v*2>n; }
+  const chevauche = (a,b) => a.debut < b.fin && b.debut < a.fin;
+  const periodeVac = iso => { const p=VAC.find(([a,b])=>a<=iso&&iso<=b); return p?(NOM_VAC[p[0]]||'vacances'):null; };
+
+  // ── Noms : même normalisation que le script de contrôle ──
+  function normTokens(s){
+    s = String(s ?? '').normalize('NFD').replace(/[^\x00-\x7F]/g,'').toUpperCase().replace(/[^A-Z]/g,' ');
+    return s.split(/\s+/).filter(t => t && !STOP.has(t));
+  }
+  function cle(nom, prenom){
+    const ns=normTokens(nom), ps=normTokens(prenom).slice(0,2), out=[], vu=new Set();
+    for(const a of ns) for(const b of ps){ const k=a+'|'+b; if(!vu.has(k)){vu.add(k); out.push([a,b]);} }
+    return out;
+  }
+  // Ratcliff-Obershelp, comme difflib.SequenceMatcher.ratio() (sans heuristique « junk », inutile sur des noms)
+  function ratio(a,b){
+    function longest(alo,ahi,blo,bhi){
+      let bi=alo,bj=blo,bk=0; let j2len=new Map();
+      for(let i=alo;i<ahi;i++){ const nj=new Map();
+        for(let j=blo;j<bhi;j++){ if(a[i]!==b[j]) continue; const k=(j2len.get(j-1)||0)+1; nj.set(j,k); if(k>bk){bi=i-k+1;bj=j-k+1;bk=k;} }
+        j2len=nj; }
+      return [bi,bj,bk];
+    }
+    let m=0; const pile=[[0,a.length,0,b.length]];
+    while(pile.length){ const [alo,ahi,blo,bhi]=pile.pop(); const [i,j,k]=longest(alo,ahi,blo,bhi);
+      if(k){ m+=k; if(alo<i&&blo<j) pile.push([alo,i,blo,j]); if(i+k<ahi&&j+k<bhi) pile.push([i+k,ahi,j+k,bhi]); } }
+    const t=a.length+b.length; return t?2*m/t:1;
+  }
+  function proche(c1,c2){
+    for(const [a1,b1] of c1) for(const [a2,b2] of c2)
+      if(b1===b2 && (a1===a2 || (a1.length>4 && ratio(a1,a2)>=0.88))) return true;
+    return false;
+  }
+  const cleFoyer = (nom,prenom) => normTokens(nom).join(' ')+' | '+normTokens(prenom).join(' ');
+
+  // ── Tarifs ──
+  function classer(d,f){
+    const n=nuits(d,f), m=+d.slice(5,7), saison=(m>=CONFIG.saisonHaute[0]&&m<=CONFIG.saisonHaute[1])?'chaude':'froide';
+    const [nv]=nuitsVac(d,f); const fer=[]; for(let i=0;i<=n;i++){ const j=plus(d,i); if(FER.has(j)) fer.push(j); }
+    if(n===7){
+      if(nv*2>n) return {saison, formule:'sem_vac'};
+      if(nv) return {saison, hg:'semaine à cheval sur les vacances'};
+      if(fer.length) return {saison, hg:'semaine hors vacances avec férié', fer};
+      return {saison, formule:'sem_hors'};
+    }
+    if(n===2 && jsem(d)===4) return {saison, formule:'we'};
+    if(n===4 && jsem(d)===0){ if(nv||fer.length) return {saison, hg:'middle week en vacances ou avec férié', fer, nv}; return {saison, formule:'mw'}; }
+    return {saison, hg:n+' nuits, durée libre', nv, n};
+  }
+  // Règles proposées pour les demandes hors grille (à valider)
+  function prixPropose(d,f,c){
+    const g=GRILLE[c.saison], n=nuits(d,f), [nv]=nuitsVac(d,f);
+    if(c.hg==='semaine à cheval sur les vacances') return {prix:g.sem_vac, regle:'tarif semaine de vacances (début ou fin de vacances, ponts de mai)'};
+    if(c.hg==='semaine hors vacances avec férié'){ const semaine=c.fer.some(j=>jsem(j)<5);
+      return semaine?{prix:g.sem_vac, regle:'férié en semaine : tarif semaine de vacances'}:{prix:g.sem_hors, regle:'férié le week-end : tarif semaine hors vacances'}; }
+    if(c.hg && c.hg.startsWith('middle week')) return {prix:Math.round(g.sem_vac/7*4), regle:'prorata du tarif semaine de vacances (4 nuits)'};
+    const base = nv*2>n ? g.sem_vac : g.sem_hors;
+    return {prix:Math.round(base/7*n), regle:`prorata du tarif semaine ${nv*2>n?'de vacances':'hors vacances'} (${n} nuits)`};
+  }
+  function tarif(d,f){
+    const c=classer(d,f), n=nuits(d,f), ok=d.slice(0,4)===String(N) && n>0 && n<=CONFIG.nuitsMax;
+    if(c.formule) return {...c, prix: ok?GRILLE[c.saison][c.formule]:null, propose:null};
+    return {...c, prix:null, propose: ok?prixPropose(d,f,c):null};
+  }
+
+  // ── Historique, refus, rapprochement ──
+  function preparer(data){
+    const sejours = data.hist.map(([an,d,f,nom,prenom,ref,br]) => ({an, debut:d, fin:f, nom, prenom, ref, branche:br, cles:cle(nom,prenom), vac:estVacSejour(d,f)}));
+    const refus = data.refus.map(([an,nom,prenom,ref,src]) => ({an, nom, prenom, ref, src:src||'fichier', cles:cle(nom,prenom)}));
+    return {sejours, refus};
+  }
+  // mode 'cumul' : chaque séjour des trois dernières années rapporte ses points, −1 par refus survenu au moins 4 ans après le dernier séjour
+  // mode 'dernier' : seul le dernier séjour compte, −1 au plus
+  const ptsSejour = s => s.an===N-1 ? (s.vac?4:3) : (s.an===N-2||s.an===N-3) ? (s.vac?2:1) : 0;
+  function noteDe(sej, refusAns, mode){
+    const nb=sej.length; let der=null;
+    for(const s of sej){ if(!der || (s.debut||'1900-01-01') > (der.debut||'1900-01-01')) der=s; }
+    const an = der?der.an:null; let cat='aucun';
+    if(an===N-1) cat = der.vac?'vacN1':'horsVacN1'; else if(an===N-2||an===N-3) cat = der.vac?'vacN2N3':'horsVacN2N3';
+    const ansRefus=[...new Set(refusAns)].sort(), dr = ansRefus.length?ansRefus[ansRefus.length-1]:null;
+    const bonusAns = ansRefus.filter(y => an===null || y-an>=4);
+    const det = sej.filter(s=>s.an>=N-3 && s.an<=N-1).sort((a,b)=>(a.debut||'').localeCompare(b.debut||'')).map(s=>({an:s.an, debut:s.debut, vac:s.vac, pts:ptsSejour(s)}));
+    let note, bonus;
+    if(mode==='dernier'){ note=NOTES[cat]; bonus = bonusAns.length ? -1 : 0; }
+    else { note=det.reduce((t,s)=>t+s.pts,0); bonus=-bonusAns.length; }
+    return {nb, an, vac:der?der.vac:null, cat, refus:dr, note, bonus, score:note+bonus, dernier:der?der.debut:null, det, bonusAns, modeNote:mode||'cumul'};
+  }
+  // ovr : {refs:[…]|'tous'|null, ignorerRefus:bool, alias:[{nom,prenom}], service:bool}
+  function rapprocher(data, base, overrides, mode){
+    const foyers=[], demandes=[];
+    data.foyers.forEach((r,k)=>{
+      const nom=String(r.nom).trim(), prenom=String(r.prenom).trim(), cf=cleFoyer(nom,prenom), ovr=overrides[cf]||{};
+      let c=cle(nom,prenom);
+      for(const al of (ovr.alias||[])) c=c.concat(cle(al.nom,al.prenom));
+      let sej=base.sejours.filter(s=>s.an<N && proche(c,s.cles));
+      const tousRefs=[...new Set(sej.map(s=>s.ref))].sort();
+      let refAn=base.refus.filter(x=>x.an<N && proche(c,x.cles));
+      if(ovr.ignorerRefus) refAn=[];
+      let refs=tousRefs, statut, sc, ref, alt={};
+      if(Array.isArray(ovr.refs)){ sej=sej.filter(s=>ovr.refs.includes(s.ref)); refs=ovr.refs.slice(); }
+      if(ovr.refs==='tous' && refs.length>1){ sc=noteDe(sej,refAn.map(x=>x.an),mode); ref=refs.join(' + '); statut='trouvé (plusieurs réf.)'; }
+      else if(refs.length<=1){ statut = refs.length?'trouvé':(refAn.length?'refus seul':'aucune trace'); sc=noteDe(sej,refAn.map(x=>x.an),mode); ref=refs[0]||null; }
+      else { statut='ambigu';
+        for(const rf of refs) alt[rf]=noteDe(sej.filter(s=>s.ref===rf),refAn.map(x=>x.an),mode);
+        ref=refs.reduce((m,x)=>alt[x].score>alt[m].score?x:m, refs[0]); sc=alt[ref]; sej=sej.filter(s=>s.ref===ref); }
+      const fid='F'+String(k).padStart(2,'0');
+      const fo={id:fid, cf, nom, prenom, branche:r.branche, br:(String(r.branche).match(/\(([\d.]+)\)/)||[])[1]||'', corresp:r.corresp, email:r.email,
+        horodateur:r.horodateur, option:r.option, commentaire:r.commentaire||'', statut, ref, refs, tousRefs, alt, sejours:sej, refusTrouves:refAn,
+        service:!!ovr.service, alias:ovr.alias||[], ...sc};
+      foyers.push(fo);
+      r.choix.forEach((ch,i)=>{ if(!ch||!ch[0]||!ch[1]) return; const [d,f]=ch, n=nuits(d,f);
+        demandes.push({id:fid+'#'+(i+1), cle:cf+'#'+(i+1), fid, choix:i+1, debut:d, fin:f, nuits:n, demDebut:d, demFin:f,
+          valide: d.slice(0,4)===String(N) && n>0 && n<=CONFIG.nuitsMax, semaine:n===7, ...tarif(d,f)}); });
+    });
+    return {foyers, demandes};
+  }
+
+  // ── Attribution ──
+  // 0. décisions du comité ; A. attribution directe (seul demandeur) ;
+  // B/C. acceptation différée : chaque foyer demande ses choix dans l'ordre, une demande tient tant qu'aucune demande prioritaire ne la chevauche.
+  // p : {modeA:'iteratif'|'meilleur', noelMin:7, semComplete:['Printemps'], ordre:[…], ajust:{cle:{debut,fin,note}}, exclus:{cle:motif}, forces:[cle]}
+  function attribuer(foyers, demandes, p){
+    const F=Object.fromEntries(foyers.map(f=>[f.id,f]));
+    const NOEL=VAC.filter(([a])=>NOM_VAC[a]==='Noël'&&a.startsWith(String(N)));
+    const semC=p.semComplete||[];
+    const dem=[], irrecevables=[];
+    for(const x0 of demandes){
+      if(!x0.valide) continue;
+      const x={...x0, reserve:null};
+      const aj=p.ajust&&p.ajust[x.cle];
+      // une date aménagée par le comité ne change pas la priorité : semaine complète et vacances restent jugées sur la demande d'origine
+      if(aj){ x.debut=aj.debut; x.fin=aj.fin; x.reserve=aj.note||'date modifiée, sous réserve d\'accord'; x.nuits=nuits(x.debut,x.fin); Object.assign(x,tarif(x.debut,x.fin)); }
+      if(p.exclus&&p.exclus[x.cle]){ irrecevables.push({...x, motif:p.exclus[x.cle]}); continue; }
+      if(p.noelMin && NOEL.some(([a,b])=>x.debut<=b && a<x.fin) && x.nuits<p.noelMin){
+        irrecevables.push({...x, motif:`${x.nuits} nuit${x.nuits>1?'s':''} pendant les vacances de Noël : seuls les séjours d'au moins ${p.noelMin===7?'une semaine':p.noelMin+' nuits'} sont retenus`}); continue; }
+      const per=[...Array(x0.nuits).keys()].map(i=>periodeVac(plus(x0.debut,i))).filter(Boolean);
+      x.periode=per[0]||null; x.court = (x0.nuits<7 && per.some(v=>semC.includes(v))) ? 1 : 0;
+      dem.push(x);
+    }
+    const ordre=(p.ordre||['semaine','premier','anciennete','service']);
+    const cleTri = x => { const f=F[x.fid]; const k=[x.court||0, f.score]; for(const c of ordre) k.push(CRITERES[c].val(x,f)); return k; };
+    const cmp=(a,b)=>{ for(let i=0;i<a.length;i++){ if(a[i]<b[i]) return -1; if(a[i]>b[i]) return 1; } return 0; };
+    const nomCmp=(x,y)=> x.choix!==y.choix ? x.choix-y.choix : (F[x.fid].nom<F[y.fid].nom?-1:F[x.fid].nom>F[y.fid].nom?1:0);
+    const bat=(x,y)=>{ const c=cmp(cleTri(x),cleTri(y)); return c<0 || (c===0 && nomCmp(x,y)<0); };
+    function motif(g,l){
+      const fg=F[g.fid], fl=F[l.fid];
+      if((g.court||0)!==(l.court||0)) return 'semaine complète prioritaire';
+      if(fg.score!==fl.score) return 'note';
+      for(const c of ordre){ if(CRITERES[c].val(g,fg)!==CRITERES[c].val(l,fl)) return CRITERES[c].lib; }
+      return 'comité';
+    }
+    const ORD=['semaine complète prioritaire','note',...ordre.map(c=>CRITERES[c].lib),'comité'];
+    const attrib=[], servis=new Set();
+    const libres = x => !attrib.some(a=>chevauche(a.d,x));
+    const concurrentsDe = x => dem.filter(y=>y.fid!==x.fid && !servis.has(y.fid) && chevauche(x,y));
+    // 0. Décisions du comité
+    for(const k of (p.forces||[])){ const x=dem.find(d=>d.cle===k); if(!x||servis.has(x.fid)||!libres(x)) continue;
+      attrib.push({d:x, etape:'F', note_choix:false}); servis.add(x.fid); }
+    // A. Attribution directe
+    if(p.modeA==='meilleur'){
+      // seulement quand le choix sans concurrent est le meilleur choix du foyer ; les autres servent de filet dans l'étape suivante
+      for(const x of dem){ if(servis.has(x.fid) || !libres(x) || concurrentsDe(x).length) continue;
+        if(dem.some(y=>y.fid===x.fid && y.choix<x.choix)) continue;
+        attrib.push({d:x, etape:'A', note_choix:false}); servis.add(x.fid); }
+    } else {
+      // règle votée, appliquée en boucle : chaque attribution libère les autres choix du foyer servi, ce qui peut laisser un autre foyer seul
+      for(let encore=true; encore;){ encore=false;
+        const best=new Map();
+        for(const x of dem){ if(servis.has(x.fid) || !libres(x) || concurrentsDe(x).length) continue; const c=best.get(x.fid); if(!c||x.choix<c.choix) best.set(x.fid,x); }
+        const tri=[...best.values()].sort((a,b)=>a.choix-b.choix);
+        if(tri.length){ const x=tri[0]; attrib.push({d:x, etape:'A', note_choix:dem.some(y=>y.fid===x.fid&&y.choix<x.choix)}); servis.add(x.fid); encore=true; } }
+    }
+    // B et C. Acceptation différée
+    const fixes=attrib.map(a=>a.d), tient=new Map(), rang=new Map();
+    const choixDe=fid=>dem.filter(x=>x.fid===fid && !fixes.some(z=>chevauche(x,z))).sort((a,b)=>a.choix-b.choix);
+    const file=[...new Set(dem.map(x=>x.fid))].filter(f=>!servis.has(f));
+    for(let garde=0; file.length && garde<50000; garde++){
+      const fid=file.shift(), liste=choixDe(fid), i=rang.get(fid)||0; if(i>=liste.length) continue;
+      const x=liste[i]; rang.set(fid,i+1);
+      const gene=[...tient.values()].filter(h=>chevauche(x,h));
+      if(gene.every(h=>bat(x,h))){ tient.set(fid,x); for(const h of gene){ tient.delete(h.fid); file.push(h.fid); } }
+      else file.push(fid);
+    }
+    for(const x of tient.values()){ attrib.push({d:x, etape:'B'}); servis.add(x.fid); }
+    // Concurrents réellement écartés, motifs et étape
+    const final=new Map(attrib.map(a=>[a.d.fid,a.d.choix]));
+    for(const a of attrib){ const x=a.d;
+      let conc=dem.filter(y=>y.fid!==x.fid && chevauche(x,y) && (!final.has(y.fid) || final.get(y.fid)>y.choix));
+      conc=conc.filter(y=>bat(x,y) || !attrib.some(z=>z.d!==x && chevauche(z.d,y) && bat(z.d,y)));
+      a.parMotif={}; for(const y of conc){ const m=motif(x,y); (a.parMotif[m]=a.parMotif[m]||[]); if(!a.parMotif[m].includes(y.fid)) a.parMotif[m].push(y.fid); }
+      a.concurrents=[...new Set(conc.map(y=>y.fid))].sort();
+      a.motifs=Object.keys(a.parMotif).sort((u,v)=>ORD.indexOf(u)-ORD.indexOf(v));
+      if(a.etape==='F'){ a.parMotif = a.concurrents.length ? {'décision du comité': a.concurrents.slice()} : {}; a.motifs = Object.keys(a.parMotif); continue; }
+      if(a.etape!=='A') a.etape = !conc.length?'A2':(a.motifs.length===1&&a.motifs[0]==='note'?'B':(a.motifs.includes('comité')?'C*':'C'));
+    }
+    const bloque={};
+    for(const x of dem){ if(final.has(x.fid) && final.get(x.fid)<=x.choix) continue;
+      const g=attrib.filter(a=>chevauche(a.d,x)).map(a=>a.d); const g2=g.filter(z=>bat(z,x));
+      const g3=g2.filter(z=>attrib.find(a=>a.d===z).etape!=='F'); const gg=g3.length?g3:(g2.length?g2:g);
+      bloque[x.id]=gg.map(z=>({fid:z.fid, motif:motif(z,x), force:attrib.find(a=>a.d===z).etape==='F', ok:bat(z,x)})); }
+    attrib.sort((a,b)=>a.d.debut<b.d.debut?-1:a.d.debut>b.d.debut?1:0);
+    const nonServis=foyers.filter(f=>!servis.has(f.id)).map(f=>f.id);
+    return {attrib, nonServis, irrecevables, bloque, dem, cleTri, bat};
+  }
+  return {N, VAC, NOM_VAC, FER, GRILLE, LIB_FORMULE, NOTES, LIB_CAT, CRITERES, D, ISO, plus, nuits, jsem, invac, periodeVac, chevauche,
+          normTokens, cle, ratio, proche, cleFoyer, classer, tarif, preparer, noteDe, ptsSejour, rapprocher, attribuer};
+})();
+
+/* ═══════════════ APPLICATION ═══════════════ */
+const E = ENGINE;
+const LS_KEY = 'attribution_sejours_' + CONFIG.annee + '_v1';
+const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const JOURS = ['lun','mar','mer','jeu','ven','sam','dim'];
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtJ = iso => iso ? `${+iso.slice(8,10)} ${MOIS[+iso.slice(5,7)-1]}` : '';
+const fmtJA = iso => iso ? `${fmtJ(iso)} ${iso.slice(0,4)}` : '';
+const MOIS_C = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+const fmtC = iso => iso ? `${+iso.slice(8,10)} ${MOIS_C[+iso.slice(5,7)-1]}` : '';
+function periode(d, f){
+  if(d.slice(0,4)!==f.slice(0,4)) return `du ${fmtJA(d)} au ${fmtJA(f)}`;
+  if(d.slice(5,7)===f.slice(5,7)) return `du ${+d.slice(8,10)} au ${fmtJA(f)}`;
+  return `du ${fmtJ(d)} au ${fmtJA(f)}`;
+}
+const perC = (d,f) => `${fmtC(d)} → ${fmtC(f)}`;
+const eur = v => v==null ? '' : Math.round(v).toLocaleString('fr-FR').replace(/ | /g,' ') + ' €';
+const nrm = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[º°]/g,'').replace(/\s+/g,' ').trim();
+const scoreCls = s => s<0?'s-neg':s===0?'s-0':s===1?'s-1':s===2?'s-2':'s-3';
+const pl = (n, mot, plur) => `${n} ${n>1?(plur||mot+'s'):mot}`;
+function capMot(w){ return w.split('-').map(p => p.length>1 && (p===p.toUpperCase() || p===p.toLowerCase()) ? p.charAt(0).toUpperCase()+p.slice(1).toLowerCase() : p).join('-'); }
+function nomPropre(f){
+  let p = String(f.prenom||'').trim(), n = String(f.nom||'').trim();
+  const pa = /\s*\(demande formul[ée]e par [^)]*\)\s*/i; p = p.replace(pa,' ').trim(); n = n.replace(pa,' ').trim();
+  n = n.replace(/^(\S+)\s+\1\b/i,'$1');
+  if(n.toLowerCase().startsWith(p.toLowerCase()+' ')) n = n.slice(p.length+1);
+  p = p.replace(/^(\S+)\s+\1$/i,'$1').replace(/\s*&\s*/g,' et ').replace(/\s+/g,' ');
+  const ACC = CONFIG.corrections || {};
+  const ca = s => s.split(' ').map(w => ['de','du','la','le','née','et','des'].includes(w.toLowerCase()) && (w===w.toUpperCase() || w===w.toLowerCase()) ? w.toLowerCase() : (ACC[capMot(w)] || capMot(w))).join(' ');
+  return {prenom: ca(p), nom: ca(n), complet: (ca(p)+' '+ca(n)).trim()};
+}
+const nomF = f => nomPropre(f).complet;
+
+/* ═══════════════ ÉTAT ═══════════════ */
+const MODELES_DEF = {
+accord:`Objet : votre séjour à {lieu} en {annee}
+
+Bonjour {prenom},
+
+Bonne nouvelle : un séjour à {lieu} vous est attribué {periode} ({nuits} nuits), au titre de votre choix n°{choix}.
+{ligne_prix}{autres_choix}
+Merci de confirmer votre séjour à votre correspondant de branche, {correspondant}, avant le {date_reponse}. L'acompte et l'attestation d'assurance vous seront demandés ensuite.
+
+Bien amicalement,
+{signature}`,
+reserve:`Objet : votre séjour à {lieu} en {annee}, sous réserve d'accord sur les dates
+
+Bonjour {prenom},
+
+Vous aviez demandé un séjour à {lieu} {periode_demandee}. Ces dates chevauchaient celles d'une autre demande retenue. Pour pouvoir vous servir tous les deux, nous vous proposons {periode} ({nuits} nuits) : {reserve}.
+
+Ce séjour vous est attribué sous réserve de votre accord sur ces dates. Merci de répondre à {correspondant} avant le {date_reponse}. Si ces dates ne vous conviennent pas, le comité reprendra l'arbitrage.
+
+{ligne_prix}{autres_choix}
+Bien amicalement,
+{signature}`,
+refus:`Objet : votre demande de séjour à {lieu} en {annee}
+
+Bonjour {prenom},
+
+Nous avons examiné avec attention votre demande pour {annee}. Nous ne pouvons malheureusement pas vous attribuer de séjour au premier tour :
+{detail_choix}
+
+Votre note de priorité était de {note} ({explication_note}). Comme l'a décidé le conseil d'administration, les séjours vont d'abord aux foyers dont la note est la plus basse, c'est-à-dire à ceux qui sont venus le moins souvent et le moins récemment ces trois dernières années. À note égale, {criteres}.
+
+Ce refus est inscrit dans l'historique. S'il survient quatre ans ou plus après votre dernier séjour, il vous donnera un bonus de priorité les années suivantes.
+
+Les créneaux encore libres seront proposés au deuxième tour, en commençant par les foyers non servis : {correspondant} vous contactera.
+
+Bien amicalement,
+{signature}`};
+const VARS = ['lieu','annee','signature','association','prenom','nom','periode','nuits','choix','ligne_prix','prix','autres_choix','periode_demandee','reserve','detail_choix','note','explication_note','criteres','correspondant','date_reponse'];
+const P_DEF = {modeA:'iteratif', noteMode:'cumul', noelMin:7, semComplete:['Printemps'], ordre:['semaine','premier','anciennete','service'], ajust:{}, exclus:{}, forces:[]};
+function etatInitial(){
+  return {v:1, data:null, source:{type:'int', nom:'', date:'', stamp:'int'}, ovr:{}, p:JSON.parse(JSON.stringify(P_DEF)), raisons:{}, seeded:false,
+    prix:true, hgPropose:true, nommer:false, modeles:{...MODELES_DEF}, tour2:[], statuts:{}, dates:{reponse:CONFIG.dateReponse},
+    ui:{onglet:'synthese', q:'', br:'', filtre:'tous', ouvert:null, attOuvert:null, fiche:null, crFiltre:'tous', crQ:''}};
+}
+let S = etatInitial();
+function sauver(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){ /* stockage indisponible : l'état reste en mémoire */ } }
+function charger(){
+  try{ const t = localStorage.getItem(LS_KEY); if(!t) return; const o = JSON.parse(t);
+    if(o && o.v===1){ const d = etatInitial(); S = {...d, ...o, p:{...d.p, ...o.p}, ui:{...d.ui, ...o.ui}, modeles:{...d.modeles, ...o.modeles}, dates:{...d.dates, ...o.dates}}; }
+  }catch(e){ S = etatInitial(); }
+}
+const donnees = () => S.data || DATA_INTEGREES;
+
+// Décisions à appliquer au premier chargement des données intégrées (aucune dans la démonstration)
+function appliquerDecisionsInitiales(){
+  if(S.seeded || S.source.type!=='int') return;
+  S.seeded = true;
+}
+
+/* ═══════════════ CALCUL ═══════════════ */
+let BASE = null, BASE_KEY = null, CALC = null, CALC_KEY = null;
+function calc(){
+  const d = donnees();
+  if(BASE_KEY !== S.source.stamp){ BASE = E.preparer(d); BASE_KEY = S.source.stamp; }
+  const key = JSON.stringify([S.source.stamp, S.ovr, S.p]);
+  if(CALC_KEY === key) return CALC;
+  const r = E.rapprocher(d, BASE, S.ovr, S.p.noteMode);
+  const res = E.attribuer(r.foyers, r.demandes, S.p);
+  const F = Object.fromEntries(r.foyers.map(f => [f.id, f]));
+  const attribDe = new Map(res.attrib.map(a => [a.d.fid, a]));
+  const irrDe = new Map(res.irrecevables.map(x => [x.id, x]));
+  CALC = {...r, ...res, F, attribDe, irrDe}; CALC_KEY = key; return CALC;
+}
+function prixDe(x){
+  if(!x) return null;
+  if(x.prix!=null) return {val:x.prix, propose:false, lib:E.LIB_FORMULE[x.formule]};
+  if(S.hgPropose && x.propose) return {val:x.propose.prix, propose:true, lib:x.propose.regle};
+  return null;
+}
+function prixHTML(x){ if(!S.prix) return ''; const p = prixDe(x);
+  if(!p) return '<span class="prix mini">hors grille</span>';
+  return p.propose ? `<span class="prix propose" title="Règle proposée, à valider : ${esc(p.lib)}">≈ ${eur(p.val)}*</span>` : `<span class="prix" title="${esc(p.lib)}">${eur(p.val)}</span>`; }
+const statutAtt = a => S.statuts[a.d.cle] || 'attribué';
+
+/* ═══════════════ TEXTES D'EXPLICATION ═══════════════ */
+function explNote(f){
+  let t;
+  if(f.modeNote==='dernier'){
+    if(f.nb===0) t = 'aucun séjour dans l\'historique';
+    else if(f.cat==='aucun') t = `dernier séjour en ${f.an}, avant ${E.N-3}`;
+    else t = E.LIB_CAT[f.cat];
+    if(f.bonus) t += `, avec un bonus de −1 pour un refus en ${f.refus}${f.an ? `, ${f.refus-f.an} ans après le dernier séjour` : ''}`;
+    return t;
+  }
+  if(!f.det || !f.det.length) t = f.nb===0 ? 'aucun séjour dans l\'historique' : `aucun séjour depuis ${E.N-3} (dernier en ${f.an})`;
+  else t = f.det.map(s => `séjour ${s.vac?'en vacances':'hors vacances'} en ${s.an} : ${s.pts}`).join(', ');
+  if(f.bonus) t += `, ${f.bonusAns.length>1?'refus':'refus'} de ${f.bonusAns.join(' et ')} : ${noteTxt(f.bonus)}${f.an?` (dernier séjour en ${f.an})`:''}`;
+  return t;
+}
+const noteTxt = s => s<0 ? '−'+Math.abs(s) : String(s);
+function libEtape(a){
+  const m = a.motifs.filter(x => x!=='note');
+  switch(a.etape){
+    case 'F': return 'Décision du comité' + (S.raisons['force:'+a.d.cle] ? ' : '+S.raisons['force:'+a.d.cle] : '');
+    case 'A': return a.note_choix ? 'Attribution directe : seul demandeur (choix mieux classés perdus)' : 'Attribution directe : seul demandeur';
+    case 'A2': return 'Seul demandeur restant : les autres ont été servis ailleurs';
+    case 'B': return `Note la plus basse (${pl(a.concurrents.length,'concurrent')})`;
+    case 'C': { const per = DE_VAC[a.d.periode] || 'des vacances';
+      const t = a.motifs.filter(x => x!=='comité').map(x => x==='note' ? 'note la plus basse' : x==='semaine complète prioritaire' ? `semaine complète prioritaire pendant les vacances ${per}` : `à note égale, ${x}`).join(' ; ');
+      return t.charAt(0).toUpperCase() + t.slice(1) + ` (${pl(a.concurrents.length,'concurrent')})`; }
+    case 'C*': return 'Égalité parfaite : à trancher par le comité';
+  }
+  return a.etape;
+}
+const DE_VAC = {'Hiver':'d\'hiver','Printemps':'de printemps','Été':'d\'été','Toussaint':'de la Toussaint','Noël':'de Noël'};
+const perDe = x => { for(let i=0;i<x.nuits;i++){ const v = E.periodeVac(E.plus(x.debut,i)); if(v) return v; } return null; };
+const TAG_ETAPE = {A:['A','t-ok'], A2:['A','t-ok'], B:['B','t-info'], C:['C','t-gold'], 'C*':['Égalité','t-warn'], F:['Comité','t-force']};
+function phrasePerte(z, x, C){
+  // z : demande retenue, x : demande écartée
+  const g = C.F[z.fid], l = C.F[x.fid], a = C.attribDe.get(z.fid);
+  const qui = S.nommer ? nomF(g) : 'un autre foyer';
+  const bl = (C.bloque[x.id]||[]).find(b => b.fid===z.fid);
+  if(a && a.etape==='F'){ const r = S.raisons['force:'+a.d.cle]; return `attribué à ${qui} par décision du comité${r && !/famille de plus/.test(r) ? ' ('+r+')' : ''}`; }
+  if(bl && bl.ok===false) return `attribué à ${qui} par décision du comité`;
+  const m = bl?.motif || 'note';
+  const motifs = {
+    'note': `revenu à ${qui}${S.nommer?',':''} dont la note était plus basse (${noteTxt(g.score)} contre ${noteTxt(l.score)})`,
+    'semaine complète prioritaire': `revenu à ${qui} qui demandait une semaine complète : pendant les vacances ${DE_VAC[x.periode||perDe(x)]||'scolaires'}, les semaines complètes passent avant les séjours courts`,
+    'semaine complète': `revenu, à note égale, à ${qui} qui demandait une semaine complète`,
+    'premier séjour': `revenu, à note égale, à ${qui} qui n'était encore jamais venu`,
+    'ancienneté du dernier séjour': `revenu, à note égale, à ${qui} dont le dernier séjour était plus ancien`,
+    'service rendu': `revenu, à note égale, à ${qui} pour service rendu à l'association`,
+    'comité': `revenu à ${qui} après examen par le comité d'une égalité parfaite`,
+  };
+  return motifs[m] || `revenu à ${qui}`;
+}
+function issueChoix(C, f, x){
+  // renvoie {etat:'gagne'|'perdu'|'irr'|'invalide'|'neutre', texte}
+  const a = C.attribDe.get(f.id);
+  if(!x.valide) return {etat:'invalide', texte:`dates hors ${E.N} ou séjour de plus de ${CONFIG.nuitsMax} nuits : demande non examinée`};
+  const irr = C.irrDe.get(x.id); if(irr) return {etat:'irr', texte:`non recevable : ${irr.motif}`};
+  if(a && a.d.choix===x.choix) return {etat:'gagne', texte: a.d.reserve ? `attribué ${periode(a.d.debut,a.d.fin)}, sous réserve d'accord (${a.d.reserve})` : 'attribué'};
+  if(a && a.d.choix<x.choix) return {etat:'neutre', texte:`non examiné : le choix n°${a.d.choix} a été obtenu`};
+  if(a && a.etape==='A' && a.d.choix>x.choix) return {etat:'perdu', texte:`non retenu : votre choix n°${a.d.choix} vous a été attribué directement, car vous étiez seul à le demander ; selon les règles de l'association, vos autres demandes ne sont alors plus examinées`};
+  if(a && a.etape==='F' && a.d.choix>x.choix){ const r = S.raisons['force:'+a.d.cle]; return {etat:'perdu', texte:`non retenu : le comité vous a attribué votre choix n°${a.d.choix}${r?', '+r:''}`}; }
+  const bl = C.bloque[x.id] || [];
+  if(!bl.length) return {etat:'perdu', texte:'non attribué'};
+  const zs = bl.map(b => C.attribDe.get(b.fid)?.d).filter(Boolean);
+  return {etat:'perdu', texte: zs.map(z => phrasePerte(z, x, C)).join(' ; ')};
+}
+function criteresTxt(){
+  const lib = {semaine:'à la semaine complète', premier:'au premier séjour', anciennete:'à l\'ancienneté du dernier séjour', service:'au service rendu'};
+  const C = calc(); const ord = S.p.ordre.filter(c => c!=='service' || C.foyers.some(f => f.service));
+  return 'priorité ' + ord.map(c => lib[c]).join(', puis ');
+}
+function varsFoyer(f){
+  const C = calc(), a = C.attribDe.get(f.id), np = nomPropre(f);
+  const dems = C.demandes.filter(x => x.fid===f.id);
+  const ligne = x => { const r = issueChoix(C, f, x); return `• Choix n°${x.choix}, ${periode(x.demDebut, x.demFin)} : ${r.texte}.`; };
+  const v = {lieu:CONFIG.lieu, annee:E.N, signature:CONFIG.signature, association:CONFIG.association, prenom:np.prenom, nom:np.nom, note:noteTxt(f.score), explication_note:explNote(f), criteres:criteresTxt(),
+    correspondant: f.corresp || 'votre correspondant de branche', date_reponse: fmtJA(S.dates.reponse),
+    detail_choix: dems.map(ligne).join('\n'), periode:'', nuits:'', choix:'', ligne_prix:'', prix:'', autres_choix:'', periode_demandee:'', reserve:''};
+  if(a){
+    const x = a.d; v.periode = periode(x.debut, x.fin); v.nuits = x.nuits; v.choix = x.choix;
+    v.periode_demandee = periode(x.demDebut, x.demFin); v.reserve = x.reserve || '';
+    const p = prixDe(x);
+    if(S.prix && p){ v.prix = eur(p.val); v.ligne_prix = p.propose ? `Le tarif de ce séjour est en cours de validation (environ ${eur(p.val)}).\n` : `Le tarif ${E.N} de ce séjour (${p.lib}) est de ${eur(p.val)}.\n`; }
+    const mieux = dems.filter(y => y.choix < x.choix);
+    if(mieux.length) v.autres_choix = '\nVos choix mieux classés n\'ont pas pu être retenus :\n' + mieux.map(ligne).join('\n') + '\n';
+  }
+  return v;
+}
+function lettre(f){
+  const C = calc(), a = C.attribDe.get(f.id);
+  const mod = !a ? S.modeles.refus : (a.d.reserve ? S.modeles.reserve : S.modeles.accord);
+  const v = varsFoyer(f); let t = mod;
+  for(const [k,val] of Object.entries(v)) t = t.split('{'+k+'}').join(String(val));
+  return t.replace(/\n{3,}/g, '\n\n');
+}
+
+/* ═══════════════ RENDU GÉNÉRAL ═══════════════ */
+const ONGLETS = [['synthese','Synthèse'],['demandes','Demandes'],['attribution','Attribution'],['calendrier','Calendrier'],['courriers','Fiches et courriers'],['tour2','2e tour et désistements']];
+function render(){ renderBandeau(); renderNav(); renderVue(); }
+function renderBandeau(){
+  const C = calc(), d = donnees();
+  const src = S.source.type==='int' ? `<span class="badge badge-int">DÉMONSTRATION</span>` : `<span class="badge badge-fic">FICHIER IMPORTÉ</span>`;
+  const quoi = S.source.type==='int' ? `Données fictives : ${esc(d.source.demandes)}, ${esc(d.source.historique.charAt(0).toLowerCase()+d.source.historique.slice(1))}, ${esc(d.source.refus.charAt(0).toLowerCase()+d.source.refus.slice(1))}` : `<b>${esc(S.source.nom)}</b> · importé le ${esc(S.source.date)}`;
+  document.querySelector('#bandeau .wrap').innerHTML = `${src}<span class="src">${quoi} · ${pl(C.foyers.length,'foyer')}, ${pl(C.demandes.length,'demande')}</span>
+    <button class="toggle ${S.prix?'on':''}" data-act="prix" aria-pressed="${S.prix}"><span class="sw"></span>Afficher les prix</button>`;
+}
+function renderNav(){
+  const C = calc();
+  const k = {demandes:C.foyers.length, attribution:C.attrib.length, courriers:C.foyers.length, tour2:C.nonServis.length};
+  const alertes = C.attrib.filter(a => a.etape==='C*').length + C.foyers.filter(f => f.statut==='ambigu').length;
+  document.getElementById('nav-tabs').innerHTML = ONGLETS.map(([id,lib]) =>
+    `<button class="tab ${S.ui.onglet===id?'on':''}" data-act="onglet" data-v="${id}">${lib}${k[id]!=null?` <span class="k">${k[id]}</span>`:''}${id==='synthese'&&alertes?` <span class="k alerte">${alertes}</span>`:''}</button>`).join('');
+}
+function renderVue(){
+  const v = document.getElementById('vue');
+  const f = {synthese:vueSynthese, demandes:vueDemandes, attribution:vueAttribution, calendrier:vueCalendrier, courriers:vueCourriers, tour2:vueTour2}[S.ui.onglet] || vueSynthese;
+  v.innerHTML = f();
+}
+
+/* ═══════════════ SYNTHÈSE ═══════════════ */
+function vueSynthese(){
+  const C = calc();
+  const servis = C.attrib.length, choix1 = C.attrib.filter(a => a.d.choix===1).length;
+  const grille = C.attrib.reduce((s,a) => s + (a.d.prix||0), 0), nG = C.attrib.filter(a => a.d.prix!=null).length;
+  const prop = C.attrib.filter(a => a.d.prix==null && a.d.propose), propT = prop.reduce((s,a) => s + a.d.propose.prix, 0);
+  let h = `<h2>Synthèse</h2><p class="lead">Répartition calculée avec ${esc(CONFIG.reglesVotees)} et les décisions du comité. Tout se recalcule dès qu'une règle, un rapprochement ou une décision change.</p>
+  <div class="stats">
+    <div class="stat"><div class="v num">${C.demandes.length}</div><div class="l">demandes de ${C.foyers.length} foyers</div></div>
+    <div class="stat"><div class="v num">${servis}</div><div class="l">foyers servis au premier tour</div></div>
+    <div class="stat"><div class="v num">${choix1}</div><div class="l">sur leur premier choix</div></div>
+    <div class="stat"><div class="v num">${C.nonServis.length}</div><div class="l">foyers non servis (2e tour)</div></div>
+    ${S.prix ? `<div class="stat"><div class="v num">${eur(grille)}</div><div class="l">recette des ${nG} séjours dans la grille${prop.length?`, plus ≈ ${eur(propT)} pour ${pl(prop.length,'séjour')} hors grille`:''}</div></div>` : ''}
+  </div>`;
+  // À faire
+  const todo = [];
+  const amb = C.foyers.filter(f => f.statut==='ambigu');
+  if(amb.length) todo.push(['w', `${pl(amb.length,'foyer')} avec des séjours sous plusieurs références : choisir lesquels compter (${amb.map(nomF).join(', ')}).`, 'demandes', 'ambigu']);
+  const plus = C.foyers.filter(f => f.statut.startsWith('trouvé (plusieurs'));
+  if(plus.length) todo.push(['w', `À vérifier avec les correspondants : ${plus.map(f => `${nomF(f)} (${f.ref})`).join(', ')}. Tous leurs séjours sont comptés.`, 'demandes', 'plusieurs']);
+  const sansTrace = C.foyers.filter(f => f.statut==='aucune trace');
+  if(sansTrace.length) todo.push(['ok', `${pl(sansTrace.length,'foyer')} sans trace dans l'historique, traités comme un premier séjour.`, 'demandes', 'aucune trace']);
+  const res = C.attrib.filter(a => a.d.reserve && statutAtt(a)==='attribué');
+  for(const a of res) todo.push(['w', `Obtenir l'accord de ${nomF(C.F[a.d.fid])} : ${a.d.reserve} (${perC(a.d.debut,a.d.fin)}).`, 'attribution', a.d.cle]);
+  const ega = C.attrib.filter(a => a.etape==='C*');
+  for(const a of ega){ const autres = (a.parMotif['comité']||[]).map(i => nomF(C.F[i])).join(', ');
+    todo.push(['w', `Égalité parfaite ${perC(a.d.debut,a.d.fin)} entre ${nomF(C.F[a.d.fid])} et ${autres} : vérifier l'arbitrage proposé.`, 'attribution', a.d.cle]); }
+  for(const x of C.irrecevables) todo.push(['ok', `Demande non recevable : ${nomF(C.F[x.fid])}, ${perC(x.debut,x.fin)} (${x.motif}).`, 'attribution', '']);
+  if(prop.length) todo.push(['w', `${pl(prop.length,'séjour attribué','séjours attribués')} hors grille tarifaire : la règle de prix proposée reste à valider.`, 'attribution', '']);
+  h += `<div class="grid2"><div><h3>À vérifier</h3>${todo.length ? todo.map(([c,t,o,ref]) => `<div class="todo ${c}"><span class="ic">${c==='ok'?'✓':'!'}</span><div>${esc(t)} <button class="lien small" data-act="aller" data-v="${o}" data-ref="${esc(ref)}">voir</button></div></div>`).join('') : '<div class="note note-ok">Rien en attente.</div>'}
+    <h3>Décisions du comité</h3>${journalDecisions()}</div>
+    <div>${blocRegles()}</div></div>`;
+  return h;
+}
+function journalDecisions(){
+  const C = calc(), L = [];
+  const parCle = new Map(C.demandes.map(x => [x.cle, x]));
+  const qui = k => { const x = parCle.get(k); return x ? `${nomF(C.F[x.fid])}, choix n°${x.choix}` : k; };
+  for(const k of S.p.forces) L.push(['Attribué par le comité', qui(k), S.raisons['force:'+k], 'force', k]);
+  for(const [k,v] of Object.entries(S.p.ajust)) L.push([`Dates modifiées : ${perC(v.debut,v.fin)}, sous réserve`, qui(k), S.raisons['ajust:'+k], 'ajust', k]);
+  for(const [k,v] of Object.entries(S.p.exclus)) L.push(['Demande écartée', qui(k), v, 'exclus', k]);
+  for(const [cf,o] of Object.entries(S.ovr)){ const f = C.foyers.find(z => z.cf===cf); if(!f) continue;
+    const quoi = [o.refs==='tous'?'toutes les références comptées':Array.isArray(o.refs)?`références retenues : ${o.refs.join(', ')||'aucune'}`:'', o.ignorerRefus?'refus ignorés':'', (o.alias||[]).length?`séjours de ${o.alias.map(x=>x.prenom+' '+x.nom).join(', ')} comptés`:'', o.service?'service rendu':''].filter(Boolean).join(' ; ');
+    if(quoi) L.push([`Rapprochement : ${quoi}`, nomF(f), S.raisons['ovr:'+cf], 'ovr', cf]); }
+  if(!L.length) return '<p class="muted small">Aucune décision pour l\'instant.</p>';
+  return L.map(([t,q,r,type,k]) => `<div class="todo ok"><span class="ic">✓</span><div style="flex:1"><b>${esc(q)}</b> · ${esc(t)}${r?`<div class="mini">${esc(r)}</div>`:''}</div><button class="btn btn-line btn-sm" data-act="annuler-dec" data-type="${type}" data-k="${esc(k)}">Annuler</button></div>`).join('');
+}
+function blocRegles(){
+  const lib = {semaine:['Semaine complète','7 nuits passent avant un séjour plus court'], premier:['Premier séjour','un foyer jamais venu passe devant'], anciennete:['Ancienneté du dernier séjour','le séjour le plus ancien passe devant'], service:['Service rendu','foyers signalés dans l\'onglet Demandes']};
+  return `<h3>Règles appliquées</h3><div class="card">
+    <h4 style="margin-top:0">Note de priorité (trois dernières années)</h4>
+    <table class="bareme"><tr><td>Séjour en vacances en ${E.N-1}</td><td>4</td></tr><tr><td>Séjour hors vacances en ${E.N-1}</td><td>3</td></tr><tr><td>Séjour en vacances en ${E.N-3} ou ${E.N-2}</td><td>2</td></tr><tr><td>Séjour hors vacances en ${E.N-3} ou ${E.N-2}</td><td>1</td></tr><tr><td>Aucun séjour depuis ${E.N-3}</td><td>0</td></tr><tr><td>Refus au moins 4 ans après le dernier séjour (ou sans séjour)</td><td>−1</td></tr></table>
+    <p class="mini" style="margin-top:6px">Un séjour compte « en vacances » si la majorité de ses nuits tombe dans les vacances d'au moins une zone (A, B ou C).</p>
+    <div class="regle" style="margin-top:8px"><label>Calcul de la note<small>« addition » : chaque séjour et chaque refus comptent, comme dans le barème ci-dessus</small></label><select data-in="noteMode"><option value="cumul" ${S.p.noteMode!=='dernier'?'selected':''}>addition des séjours, −1 par refus</option><option value="dernier" ${S.p.noteMode==='dernier'?'selected':''}>dernier séjour seulement</option></select></div>
+    <h4>Étapes</h4>
+    <ul class="puces small"><li><b>A, attribution directe</b> : un foyer seul à demander des dates les obtient.</li><li><b>B, note</b> : sinon, la note la plus basse l'emporte.</li><li><b>C, départage</b> : à note égale, les critères ci-dessous, dans l'ordre. L'égalité parfaite remonte au comité.</li><li>Un seul séjour par foyer au premier tour.</li></ul>
+    <h4>Ordre des critères de départage</h4>
+    ${S.p.ordre.map((c,i) => `<div class="crit"><span class="rang">${i+1}</span><span class="lib">${lib[c][0]}<small>${lib[c][1]}</small></span><span class="fl"><button data-act="ordre" data-c="${c}" data-d="-1" aria-label="Monter">▲</button><button data-act="ordre" data-c="${c}" data-d="1" aria-label="Descendre">▼</button></span></div>`).join('')}
+    <h4>Règles complémentaires</h4>
+    <div class="regle"><label>Séjours courts à Noël<small>Durée minimale pendant les vacances de Noël (0 = pas de minimum)</small></label><input type="number" min="0" max="10" value="${S.p.noelMin}" data-in="noelMin"></div>
+    <div class="regle"><label>Choix sans concurrent<small>Par défaut : attribution directe, même sur un choix 2 ou 3</small></label><select data-in="modeA"><option value="iteratif" ${S.p.modeA!=='meilleur'?'selected':''}>attribution directe (par défaut)</option><option value="meilleur" ${S.p.modeA==='meilleur'?'selected':''}>meilleur choix d'abord</option></select></div>
+    <div class="regle"><label>Semaine complète prioritaire<small>Pendant ces vacances, une semaine passe avant un séjour court, quelle que soit la note</small></label><span class="form-inline" style="margin:0">${['Hiver','Printemps','Été','Toussaint'].map(v => `<button class="chip ${(S.p.semComplete||[]).includes(v)?'on':''}" data-act="semc" data-v="${v}">${v}</button>`).join('')}</span></div>
+    <h4>Prix</h4>
+    <div class="regle"><label>Prix des séjours hors grille<small>Appliquer les règles proposées (prorata, fériés, ponts de mai), signalées par *</small></label><button class="toggle ${S.hgPropose?'on':''}" data-act="hg"><span class="sw"></span></button></div>
+    <div class="regle"><label>Date limite de réponse<small>Reprise dans les courriers</small></label><input type="date" value="${S.dates.reponse}" data-in="dateReponse"></div>
+  </div>
+  <div class="toolbar" style="margin-top:14px"><button class="btn btn-teal" data-act="exporter">⭳ Exporter le classeur de travail</button><button class="btn btn-line" data-act="cloturer">Clôturer ${E.N} : classeur pour ${E.N+1}</button></div>`;
+}
+
+/* ═══════════════ DEMANDES ═══════════════ */
+function vueDemandes(){
+  const C = calc();
+  const brs = [...new Set(C.foyers.map(f => f.branche))].sort();
+  return `<h2>Demandes</h2><p class="lead">Chaque foyer avec sa note, le rapprochement avec l'historique et le sort de ses trois choix. Cliquez sur une ligne pour corriger un rapprochement ou signaler un service rendu.</p>
+  <div class="toolbar"><input type="search" placeholder="Rechercher un nom, une référence…" value="${esc(S.ui.q)}" data-in="q">
+    <select data-in="br"><option value="">Toutes les branches</option>${brs.map(b => `<option ${S.ui.br===b?'selected':''}>${esc(b)}</option>`).join('')}</select>
+    ${[['tous','Tous'],['servis','Servis'],['non','Non servis'],['verif','À vérifier']].map(([k,l]) => `<button class="chip ${S.ui.filtre===k?'on':''}" data-act="filtre" data-v="${k}">${l}</button>`).join('')}
+  </div><div id="liste-dem">${tableDemandes()}</div>`;
+}
+function tagStatut(f){
+  const m = {'trouvé':['historique','t-ok'], 'refus seul':['refus seul','t-info'], 'aucune trace':['premier séjour','t-info'], 'ambigu':['plusieurs réf.','t-bad']};
+  if(f.statut.startsWith('trouvé (plusieurs')) return `<span class="tag t-warn" title="Tous les séjours comptés, à vérifier">plusieurs réf.</span>`;
+  const [l,c] = m[f.statut] || [f.statut,'t-gris']; return `<span class="tag ${c}">${l}</span>`;
+}
+function tableDemandes(){
+  const C = calc(); let fs = C.foyers.slice();
+  if(S.ui.q){ const q = nrm(S.ui.q); fs = fs.filter(f => nrm(f.nom+' '+f.prenom+' '+(f.ref||'')+' '+f.corresp).includes(q)); }
+  if(S.ui.br) fs = fs.filter(f => f.branche===S.ui.br);
+  if(S.ui.filtre==='servis') fs = fs.filter(f => C.attribDe.has(f.id));
+  if(S.ui.filtre==='non') fs = fs.filter(f => !C.attribDe.has(f.id));
+  if(S.ui.filtre==='verif') fs = fs.filter(f => f.statut!=='trouvé' || S.ovr[f.cf]);
+  if(['ambigu','plusieurs','aucune trace'].includes(S.ui.filtre)) fs = fs.filter(f => S.ui.filtre==='plusieurs' ? f.statut.startsWith('trouvé (plusieurs') : f.statut===S.ui.filtre);
+  fs.sort((a,b) => a.branche.localeCompare(b.branche) || a.score-b.score || nomF(a).localeCompare(nomF(b)));
+  if(!fs.length) return '<div class="note">Aucun foyer ne correspond à ces filtres.</div>';
+  const rows = fs.map(f => {
+    const a = C.attribDe.get(f.id), dems = C.demandes.filter(x => x.fid===f.id);
+    const ch = [1,2,3].map(i => { const x = dems.find(y => y.choix===i); if(!x) return '<td class="mini">—</td>';
+      const r = issueChoix(C, f, x); const cls = r.etat==='gagne'?'gagne':(r.etat==='irr'||r.etat==='invalide')?'barre':'';
+      return `<td><span class="ch ${cls}">${perC(x.demDebut,x.demFin)}</span><span class="mini">${x.nuits} n.${S.prix?' · '+prixHTML(x):''}</span></td>`; }).join('');
+    const res = a ? `<span class="tag ${a.d.reserve?'t-warn':'t-ok'}">choix ${a.d.choix}${a.d.reserve?', sous réserve':''}</span>` : '<span class="tag t-bad">non servi</span>';
+    const open = S.ui.ouvert===f.cf;
+    return `<tr class="clic ${open?'sel':''}" data-act="ouvrir" data-v="${esc(f.cf)}"><td><b>${esc(nomF(f))}</b>${f.service?' <span class="tag t-gold">service rendu</span>':''}<div class="mini">${esc(f.corresp||'')}${f.ref?' · '+esc(f.ref):''}</div></td>
+      <td class="nowrap">${esc(f.br)}</td><td><span class="score ${scoreCls(f.score)}">${noteTxt(f.score)}</span> ${tagStatut(f)}</td>${ch}<td>${res}</td></tr>
+      ${open?`<tr><td colspan="7" style="padding:0">${detailFoyer(f)}</td></tr>`:''}`;
+  }).join('');
+  return `<div class="tbl-wrap"><table class="t"><thead><tr><th>Foyer</th><th>Br.</th><th>Note</th><th>Choix 1</th><th>Choix 2</th><th>Choix 3</th><th>Résultat</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="mini" style="margin-top:6px">${pl(fs.length,'foyer')} affiché${fs.length>1?'s':''}.${S.prix&&S.hgPropose?' * prix proposé pour une demande hors grille, à valider.':''}</p>`;
+}
+function detailFoyer(f){
+  const C = calc(), o = S.ovr[f.cf] || {};
+  const parRef = {}; const tous = BASE.sejours.filter(s => s.an<E.N && E.proche(E.cle(f.nom,f.prenom).concat(...(o.alias||[]).map(x => E.cle(x.nom,x.prenom))), s.cles));
+  for(const s of tous){ (parRef[s.ref] = parRef[s.ref] || []).push(s); }
+  const refsRetenues = Array.isArray(o.refs) ? o.refs : (o.refs==='tous' ? Object.keys(parRef) : (f.statut==='ambigu' ? [f.ref] : Object.keys(parRef)));
+  const blocRefs = Object.keys(parRef).length ? Object.entries(parRef).sort().map(([r,ss]) => `<div class="ligne-ref"><label><input type="checkbox" data-act="ref" data-cf="${esc(f.cf)}" data-ref="${esc(r)}" ${refsRetenues.includes(r)?'checked':''}> <b>${esc(r)}</b></label>
+      <span class="mini">${ss.sort((a,b)=>(b.debut||'').localeCompare(a.debut||'')).slice(0,6).map(s => `${s.an}${s.vac?' (vac.)':''} ${esc(capMot(s.prenom))}`).join(' · ')}${ss.length>6?' …':''}</span></div>`).join('')
+    : '<p class="small muted">Aucun séjour trouvé à ce nom dans l\'historique.</p>';
+  const refus = f.refusTrouves.length || o.ignorerRefus ? `<label class="ligne-ref"><input type="checkbox" data-act="ign-refus" data-cf="${esc(f.cf)}" ${o.ignorerRefus?'checked':''}> Ignorer les refus trouvés à ce nom</label><div class="mini">${BASE.refus.filter(x => E.proche(E.cle(f.nom,f.prenom), x.cles)).map(x => `${x.an} : ${esc(x.prenom)} ${esc(x.nom)}${x.ref?' ('+esc(x.ref)+')':''}${x.src==='déduit'?' · déduit des demandes '+(E.N-1):''}`).join(' · ') || 'aucun'}</div>` : '<p class="small muted">Aucun refus enregistré.</p>';
+  return `<div class="detail"><div class="grid2"><div>
+      <h4 style="margin-top:0">Note ${noteTxt(f.score)} : ${esc(explNote(f))}</h4>
+      <p class="small">${f.nb ? `${pl(f.nb,'séjour')} dans l'historique, le dernier ${f.dernier?'le '+fmtJA(f.dernier):'en '+f.an}${f.vac?' (en vacances)':''}.` : 'Jamais venu d\'après l\'historique.'}</p>
+      <h4>Séjours comptés</h4>${blocRefs}
+      <h4>Refus</h4>${refus}
+      <h4>Compter aussi les séjours d'une autre personne du foyer</h4>
+      ${(o.alias||[]).map((x,i) => `<div class="ligne-ref">${esc(x.prenom)} ${esc(x.nom)} <button class="btn btn-line btn-sm" data-act="alias-del" data-cf="${esc(f.cf)}" data-i="${i}">Retirer</button></div>`).join('')}
+      <div class="form-inline"><input type="text" placeholder="Nom" id="al-nom"><input type="text" placeholder="Prénom" id="al-pre"><button class="btn btn-line btn-sm" data-act="alias-add" data-cf="${esc(f.cf)}">Ajouter</button></div>
+    </div><div>
+      <label class="ligne-ref"><input type="checkbox" data-act="service" data-cf="${esc(f.cf)}" ${o.service?'checked':''}> <b>Service rendu à l'association</b></label>
+      <p class="mini">Critère de départage à note égale, au rang ${S.p.ordre.indexOf('service')+1}.</p>
+      <h4>Note du comité</h4>
+      <div class="form-inline"><input type="text" style="flex:1" value="${esc(S.raisons['ovr:'+f.cf]||'')}" data-in="raison-ovr" data-cf="${esc(f.cf)}" placeholder="Pourquoi ce rapprochement…"></div>
+      <h4>Message du demandeur</h4><p class="small" style="white-space:pre-wrap">${esc(f.commentaire||'—')}</p>
+      <p class="mini" style="margin-top:8px">${f.email?esc(f.email)+' · ':''}${f.option?esc(CONFIG.libelleOption)+' : '+esc(f.option)+' · ':''}reçu le ${esc(String(f.horodateur||'').slice(0,10))}</p>
+    </div></div></div>`;
+}
+
+/* ═══════════════ ATTRIBUTION ═══════════════ */
+function vueAttribution(){
+  const C = calc();
+  const ega = C.attrib.filter(a => a.etape==='C*'), res = C.attrib.filter(a => a.d.reserve), frc = C.attrib.filter(a => a.etape==='F');
+  const tot = C.attrib.filter(a => statutAtt(a)!=='annulé').reduce((s,a) => s + (prixDe(a.d)?.val||0), 0);
+  let h = `<h2>Attribution du premier tour</h2><p class="lead">${pl(C.attrib.length,'séjour attribué','séjours attribués')}, dans l'ordre du calendrier. Ouvrez un séjour pour voir les concurrents écartés et, si besoin, enregistrer une décision du comité : attribuer à un autre foyer, décaler les dates sous réserve d'accord, ou écarter la demande.</p>`;
+  if(ega.length) h += `<div class="note note-warn"><b>${pl(ega.length,'égalité parfaite','égalités parfaites')}</b> : ${ega.map(a => `${perC(a.d.debut,a.d.fin)} (${nomF(C.F[a.d.fid])})`).join(', ')}. L'outil propose un arbitrage ; le comité le confirme ou le change.</div>`;
+  if(res.length) h += `<div class="note note-warn"><b>Sous réserve d'accord</b> : ${res.map(a => `${nomF(C.F[a.d.fid])}, ${perC(a.d.debut,a.d.fin)}`).join(' ; ')}</div>`;
+  if(frc.length) h += `<div class="note note-force"><b>${pl(frc.length,'décision')} du comité</b> appliquée${frc.length>1?'s':''} avant le calcul.</div>`;
+  if(S.prix) h += `<p class="small" style="margin-bottom:10px">Total des séjours attribués : <b>${eur(tot)}</b>${S.hgPropose?' (dont prix proposés hors grille, signalés par *)':' (hors grille non comptés)'}.</p>`;
+  h += C.attrib.map(carteAtt).join('');
+  if(C.irrecevables.length) h += `<h3>Demandes non recevables</h3>` + C.irrecevables.map(x => `<div class="cand"><span class="q"><b>${esc(nomF(C.F[x.fid]))}</b>, choix n°${x.choix}, ${perC(x.debut,x.fin)}<div class="mini">${esc(x.motif)}</div></span>${S.p.exclus[x.cle]?`<button class="btn btn-line btn-sm" data-act="annuler-dec" data-type="exclus" data-k="${esc(x.cle)}">Rétablir</button>`:'<span class="mini">règle de Noël (onglet Synthèse)</span>'}</div>`).join('');
+  return h;
+}
+function carteAtt(a){
+  const C = calc(), x = a.d, f = C.F[x.fid], open = S.ui.attOuvert===x.cle, st = statutAtt(a);
+  const [t,c] = TAG_ETAPE[a.etape] || [a.etape,'t-gris'];
+  const vac = E.periodeVac(x.debut);
+  const cls = ['att', open?'open':'', a.etape==='F'?'f':'', x.reserve?'r':'', st==='annulé'?'ann':''].join(' ');
+  let h = `<div class="${cls}" id="att-${esc(x.cle)}"><button class="att-head" data-act="att" data-v="${esc(x.cle)}" aria-expanded="${open}">
+    <div class="att-date"><span class="d">${perC(x.debut,x.fin)}</span><small>${x.nuits} nuits${vac?' · '+vac:''}</small></div>
+    <div class="att-main"><div><div class="who">${esc(nomF(f))} <span class="mini">· br. ${esc(f.br)} · choix n°${x.choix}</span></div><div class="how">${esc(libEtape(a))}${x.reserve?' · <b>sous réserve</b> : '+esc(x.reserve):''}</div></div>
+    <div class="att-side">${prixHTML(x)}<span class="score ${scoreCls(f.score)}" title="Note">${noteTxt(f.score)}</span><span class="tag ${c}">${t}</span>${st!=='attribué'?`<span class="tag ${st==='annulé'?'t-bad':'t-ok'}">${st}</span>`:''}</div></div>
+    <span class="chev">▾</span></button>`;
+  if(open){
+    const autres = C.dem.filter(y => y.fid!==x.fid && E.chevauche(x,y));
+    const ecartes = Object.entries(a.parMotif).flatMap(([m,ids]) => ids.map(i => [m,i]));
+    h += `<div class="detail"><div class="grid2"><div>
+      <h4 style="margin-top:0">Concurrents écartés</h4>
+      ${ecartes.length ? ecartes.map(([m,i]) => { const g = C.F[i], y = autres.find(z => z.fid===i); return `<div class="cand"><span class="score ${scoreCls(g.score)}">${noteTxt(g.score)}</span><span class="q"><b>${esc(nomF(g))}</b> · br. ${esc(g.br)}${y?` · choix n°${y.choix}, ${perC(y.debut,y.fin)}`:''}<div class="mini">écarté par : ${esc(m)}${C.attribDe.has(i)?` · servi ailleurs (choix n°${C.attribDe.get(i).d.choix})`:''}</div></span></div>`; }).join('') : '<p class="small muted">Aucun : personne d\'autre n\'attendait ces dates.</p>'}
+      ${autres.filter(y => !ecartes.some(([,i]) => i===y.fid)).length ? `<h4>Autres demandes sur ces dates</h4>${autres.filter(y => !ecartes.some(([,i]) => i===y.fid)).map(y => `<div class="cand"><span class="score ${scoreCls(C.F[y.fid].score)}">${noteTxt(C.F[y.fid].score)}</span><span class="q">${esc(nomF(C.F[y.fid]))} · choix n°${y.choix}, ${perC(y.debut,y.fin)}<div class="mini">${C.attribDe.has(y.fid)?`servi par son choix n°${C.attribDe.get(y.fid).d.choix}`:'écarté par un autre séjour'}</div></span></div>`).join('')}` : ''}
+      <h4>Suivi</h4><div class="form-inline">${['attribué','confirmé','annulé'].map(s => `<button class="chip ${st===s?'on':''}" data-act="statut" data-k="${esc(x.cle)}" data-v="${s}">${s}</button>`).join('')}</div>
+      ${x.demDebut!==x.debut||x.demFin!==x.fin?`<p class="mini" style="margin-top:6px">Dates demandées : ${perC(x.demDebut,x.demFin)}.</p>`:''}
+      ${S.raisons['ajust:'+x.cle]||S.raisons['force:'+x.cle]?`<div class="note note-force small">${esc(S.raisons['ajust:'+x.cle]||S.raisons['force:'+x.cle])}</div>`:''}
+    </div><div class="dec-box">
+      <h5>Décision du comité</h5>
+      ${autres.length ? `<div class="form-inline"><select id="force-${esc(x.cle)}">${autres.map(y => `<option value="${esc(y.cle)}">${esc(nomF(C.F[y.fid]))} (note ${noteTxt(C.F[y.fid].score)}), choix n°${y.choix}, ${perC(y.debut,y.fin)}</option>`).join('')}</select></div>
+        <div class="form-inline"><input type="text" style="flex:1" placeholder="Motif de la décision" id="force-r-${esc(x.cle)}"><button class="btn btn-force btn-sm" data-act="forcer" data-k="${esc(x.cle)}">Attribuer à ce foyer</button></div>` : '<p class="mini">Aucune autre demande sur ces dates.</p>'}
+      <div class="form-inline" style="margin-top:10px"><input type="date" id="aj-d-${esc(x.cle)}" value="${x.debut}"><input type="date" id="aj-f-${esc(x.cle)}" value="${x.fin}"><input type="text" style="flex:1" placeholder="Ce qui change (ex. arrivée le vendredi)" id="aj-n-${esc(x.cle)}" value="${esc(x.reserve||'')}"><button class="btn btn-force btn-sm" data-act="ajuster" data-k="${esc(x.cle)}">Décaler sous réserve</button></div>
+      <div class="form-inline" style="margin-top:10px"><input type="text" style="flex:1" placeholder="Motif (ex. trop court pour la période)" id="ex-r-${esc(x.cle)}"><button class="btn btn-danger btn-sm" data-act="exclure" data-k="${esc(x.cle)}">Écarter cette demande</button></div>
+      ${(a.etape==='F'||S.p.ajust[x.cle])?`<div class="form-inline" style="margin-top:10px">${a.etape==='F'?`<button class="btn btn-line btn-sm" data-act="annuler-dec" data-type="force" data-k="${esc(x.cle)}">Annuler l'attribution forcée</button>`:''}${S.p.ajust[x.cle]?`<button class="btn btn-line btn-sm" data-act="annuler-dec" data-type="ajust" data-k="${esc(x.cle)}">Revenir aux dates demandées</button>`:''}</div>`:''}
+    </div></div></div>`;
+  }
+  return h + '</div>';
+}
+
+/* ═══════════════ CALENDRIER ═══════════════ */
+const COUL_BR_L = CONFIG.couleursBranches;
+const COUL_BR = Object.fromEntries(COUL_BR_L);
+function occupation(){
+  const C = calc(), occ = new Map();
+  for(const a of C.attrib){ if(statutAtt(a)==='annulé') continue; for(let i=0;i<a.d.nuits;i++) occ.set(E.plus(a.d.debut,i), {f:C.F[a.d.fid], x:a.d, t:1}); }
+  for(const t of S.tour2){ if(t.statut==='décliné') continue; const f = C.foyers.find(z => z.cf===t.cf); if(!f) continue;
+    for(let i=0;i<E.nuits(t.debut,t.fin);i++) occ.set(E.plus(t.debut,i), {f, x:t, t:2}); }
+  return occ;
+}
+function vueCalendrier(){
+  const occ = occupation(); let h = `<h2>Calendrier ${E.N}</h2><p class="lead">Nuits occupées par les séjours attribués, en couleur par branche. Les jours en vert pâle sont des vacances scolaires (au moins une zone), les points rouges des jours fériés.</p>
+  <div class="leg">${COUL_BR_L.map(([b,c]) => `<span><i class="dotc" style="background:${c}"></i>branche ${b}</span>`).join('')}<span><i class="dotc" style="background:var(--vac);border:1px solid #CFE0D8"></i>vacances</span><span><i class="dotc" style="background:repeating-linear-gradient(45deg,#888 0 3px,#bbb 3px 6px)"></i>2e tour</span></div><div class="cal-grid">`;
+  for(let m=0;m<13;m++){
+    const an = E.N + Math.floor(m/12), mo = m%12, prem = `${an}-${String(mo+1).padStart(2,'0')}-01`;
+    const nbj = new Date(Date.UTC(an,mo+1,0)).getUTCDate(), dec = E.jsem(prem);
+    if(m===12){ const fin = `${E.N+1}-01-06`; if(![...occ.keys()].some(k => k>=`${E.N+1}-01-01` && k<=fin)) continue; }
+    let cells = ''; for(let i=0;i<dec;i++) cells += '<td class="hm"></td>';
+    for(let j=1;j<=nbj;j++){ const iso = `${an}-${String(mo+1).padStart(2,'0')}-${String(j).padStart(2,'0')}`, o = occ.get(iso);
+      const cl = [E.invac(iso)?'vac':'', E.FER.has(iso)?'fer':'', o?'occ':''].join(' ');
+      const st = o ? (o.t===2 ? `background:repeating-linear-gradient(45deg,${COUL_BR[o.f.br]||'#777'} 0 4px,#888 4px 7px)` : `background:${COUL_BR[o.f.br]||'#777'}`) : '';
+      cells += `<td class="${cl}" style="${st}" title="${o?esc(nomF(o.f))+(o.t===2?' (2e tour)':''):''}">${j}</td>`;
+      if((dec+j)%7===0 && j<nbj) cells += '</tr><tr>'; }
+    h += `<div class="cal-mois"><h4>${MOIS[mo].charAt(0).toUpperCase()+MOIS[mo].slice(1)} ${an}</h4><table class="cal-tbl"><tr>${JOURS.map(d => `<th>${d}</th>`).join('')}</tr><tr>${cells}</tr></table></div>`;
+  }
+  return h + '</div>';
+}
+
+/* ═══════════════ FICHES ET COURRIERS ═══════════════ */
+function vueCourriers(){
+  const C = calc();
+  let fs = C.foyers.slice();
+  if(S.ui.crFiltre==='servis') fs = fs.filter(f => C.attribDe.has(f.id) && !C.attribDe.get(f.id).d.reserve);
+  if(S.ui.crFiltre==='reserve') fs = fs.filter(f => C.attribDe.get(f.id)?.d.reserve);
+  if(S.ui.crFiltre==='non') fs = fs.filter(f => !C.attribDe.has(f.id));
+  if(S.ui.crQ){ const q = nrm(S.ui.crQ); fs = fs.filter(f => nrm(f.nom+' '+f.prenom).includes(q)); }
+  fs.sort((a,b) => nomF(a).localeCompare(nomF(b)));
+  if(!C.foyers.length) return '<h2>Fiches et courriers</h2><div class="note">Aucune demande pour l\'instant : importez un classeur avec l\'onglet des demandes rempli.</div>';
+  if(!S.ui.fiche || !C.foyers.some(f => f.cf===S.ui.fiche)) S.ui.fiche = (fs[0]||C.foyers[0]).cf;
+  const f = C.foyers.find(z => z.cf===S.ui.fiche);
+  return `<h2>Fiches et courriers</h2><p class="lead">La fiche reprend, choix par choix, ce qui a été décidé et pourquoi. Le courrier part du modèle correspondant (accord, accord sous réserve, refus), modifiable plus bas.</p>
+  <div class="toolbar">${[['tous','Tous'],['servis','Accords'],['reserve','Sous réserve'],['non','Refus']].map(([k,l]) => `<button class="chip ${S.ui.crFiltre===k?'on':''}" data-act="crfiltre" data-v="${k}">${l}</button>`).join('')}
+    <input type="search" placeholder="Rechercher…" value="${esc(S.ui.crQ)}" data-in="crQ">
+    <button class="toggle ${S.nommer?'on':''}" data-act="nommer"><span class="sw"></span>Nommer les foyers retenus</button>
+    <button class="btn btn-teal btn-sm" data-act="brevo">⭳ Export Brevo (${fs.length})</button></div>
+  <div class="split"><div class="liste-f" id="liste-f">${fs.map(z => { const a = C.attribDe.get(z.id);
+      return `<button class="${z.cf===S.ui.fiche?'on':''}" data-act="fiche" data-v="${esc(z.cf)}"><span>${esc(nomF(z))}</span><span class="tag ${a?(a.d.reserve?'t-warn':'t-ok'):'t-bad'}">${a?(a.d.reserve?'réserve':'choix '+a.d.choix):'refus'}</span></button>`; }).join('') || '<p class="small muted" style="padding:10px">Aucun foyer.</p>'}</div>
+  <div>${f ? fiche(f) : ''}</div></div>
+  <details class="card" style="margin-top:20px"><summary style="cursor:pointer;font-weight:700">Modèles de courrier</summary>
+    <p class="small muted" style="margin:8px 0">Les mots entre accolades sont remplacés pour chaque foyer :</p><div class="vars">${VARS.map(v => `<code>{${v}}</code>`).join('')}</div>
+    <div class="grid3">${[['accord','Accord'],['reserve','Accord sous réserve'],['refus','Refus']].map(([k,l]) => `<div><h4 style="margin-top:0">${l}</h4><textarea class="modele" data-in="modele" data-k="${k}">${esc(S.modeles[k])}</textarea></div>`).join('')}</div>
+    <button class="btn btn-line btn-sm" style="margin-top:10px" data-act="modeles-def">Rétablir les modèles d'origine</button></details>`;
+}
+function fiche(f){
+  const C = calc(), a = C.attribDe.get(f.id), dems = C.demandes.filter(x => x.fid===f.id);
+  return `<div class="fiche"><div class="en-tete"><div><div class="t">${esc(nomF(f))}</div><div class="mini">Branche ${esc(f.br)} · ${esc(f.corresp||'')} · ${esc(f.ref||'sans référence')}</div></div>
+    <div style="text-align:right"><span class="score ${scoreCls(f.score)}">${noteTxt(f.score)}</span><div class="mini" style="max-width:260px">${esc(explNote(f))}</div></div></div>
+    ${dems.map(x => { const r = issueChoix(C, f, x), cls = r.etat==='gagne'?'gagne':r.etat==='neutre'?'neutre':'perdu';
+      return `<div class="j-dem ${cls}"><div class="head"><span>Choix n°${x.choix} · ${periode(x.demDebut,x.demFin)} (${x.nuits} nuits)</span>${prixHTML(x)}</div><div>${esc(r.texte.charAt(0).toUpperCase()+r.texte.slice(1))}.</div></div>`; }).join('')}
+    ${a && C.attribDe.get(f.id).etape!=='A' && C.attribDe.get(f.id).etape!=='F' ? `<p class="small muted">Comment ce séjour a été décidé : ${esc(libEtape(a))}.</p>` : ''}
+    <h4>Courrier</h4><textarea class="lettre" id="lettre">${esc(lettre(f))}</textarea>
+    <div class="toolbar no-print" style="margin-top:8px"><button class="btn btn-teal btn-sm" data-act="copier">Copier le courrier</button><button class="btn btn-line btn-sm" data-act="imprimer">Imprimer la fiche</button>${f.email?`<span class="mini">${esc(f.email)}</span>`:''}</div></div>`;
+}
+
+/* ═══════════════ 2e TOUR ET DÉSISTEMENTS ═══════════════ */
+function creneauxLibres(){
+  const occ = occupation(), libres = []; let d = `${E.N}-01-01`, debut = null;
+  while(d <= `${E.N+1}-01-02`){ const o = occ.has(d);
+    if(!o && !debut) debut = d;
+    if(o && debut){ libres.push([debut, d]); debut = null; }
+    d = E.plus(d,1); }
+  if(debut) libres.push([debut, `${E.N+1}-01-03`]);
+  return libres.filter(([a,b]) => E.nuits(a,b) >= 2);
+}
+function vueTour2(){
+  const C = calc();
+  const libres = creneauxLibres();
+  const annules = C.attrib.filter(a => statutAtt(a)==='annulé');
+  const ns = C.nonServis.map(id => C.F[id]);
+  const prio = f => { const x = C.dem.find(y => y.fid===f.id); return x ? C.cleTri(x) : [f.score, 9, 9, 9999]; };
+  const cmp = (a,b) => { const ka = prio(a), kb = prio(b); for(let i=0;i<ka.length;i++){ if(ka[i]!==kb[i]) return ka[i]-kb[i]; } return nomF(a).localeCompare(nomF(b)); };
+  ns.sort(cmp);
+  const dejaT2 = new Set(S.tour2.filter(t => t.statut!=='décliné').map(t => t.cf));
+  const candidats = ([a,b]) => { const out = [];
+    for(const f of ns){ if(dejaT2.has(f.cf)) continue;
+      for(const x of C.demandes.filter(y => y.fid===f.id && y.valide)){ const d = x.demDebut > a ? x.demDebut : a, e = x.demFin < b ? x.demFin : b;
+        if(E.nuits(d,e) >= 2){ out.push({f, x, d, e}); break; } } }
+    return out; };
+  const avec = libres.map(g => ({g, c:candidats(g), lib:annules.some(a => a.d.debut>=g[0] && a.d.fin<=g[1])})).filter(o => o.c.length || o.lib);
+  let h = `<h2>Deuxième tour et désistements</h2><p class="lead">Au deuxième tour, les créneaux restés libres sont proposés d'abord aux foyers non servis, dans l'ordre de priorité (note, puis critères de départage) ; Au troisième tour, premier arrivé, premier servi${CONFIG.contactTroisiemeTour ? ' via '+esc(CONFIG.contactTroisiemeTour) : ''}.</p>
+  <div class="note"><b>En cas de désistement</b> : passez le séjour en « annulé » dans l'onglet Attribution. Le créneau apparaît ici, avec dans l'ordre : la prolongation des séjours voisins, puis les foyers refusés sur cette période, puis un appel à tous (premier qui répond).</div>`;
+  h += `<h3>Créneaux libres demandés par des foyers non servis</h3>`;
+  h += avec.length ? avec.map(({g:[a,b], c, lib}) => {
+    const voisins = C.attrib.filter(z => statutAtt(z)!=='annulé' && (z.d.fin===a || z.d.debut===b));
+    return `<div class="gap ${lib?'lib':''}"><div class="h"><span class="d">${perC(a,b)}</span><span class="mini">${E.nuits(a,b)} nuits${E.periodeVac(a)?' · '+E.periodeVac(a):''}${lib?' · <span class="tag t-warn">libéré par désistement</span>':''}</span></div>
+      ${lib && voisins.length ? `<p class="small" style="margin:6px 0">1. Prolongation possible : ${voisins.map(z => `${esc(nomF(C.F[z.d.fid]))} (${perC(z.d.debut,z.d.fin)})`).join(', ')}.</p>` : ''}
+      ${c.map((o,i) => `<div class="cand"><span class="score ${scoreCls(o.f.score)}">${noteTxt(o.f.score)}</span><span class="q"><b>${i+1}. ${esc(nomF(o.f))}</b> · br. ${esc(o.f.br)}<div class="mini">souhaitait ${perC(o.x.demDebut,o.x.demFin)} (choix n°${o.x.choix}) · proposition ${perC(o.d,o.e)}, ${E.nuits(o.d,o.e)} nuits ${S.prix?'· '+prixHTML(E.tarif(o.d,o.e)):''}</div></span><button class="btn btn-teal btn-sm" data-act="t2-add" data-cf="${esc(o.f.cf)}" data-d="${o.d}" data-f="${o.e}">Proposer</button></div>`).join('') || '<p class="small muted">Aucun foyer non servi n\'avait demandé ces dates.</p>'}
+    </div>`; }).join('') : '<p class="small muted">Aucun créneau libre ne correspond aux souhaits des foyers non servis.</p>';
+  h += `<h3>Propositions du deuxième tour</h3>`;
+  h += S.tour2.length ? `<div class="tbl-wrap"><table class="t"><thead><tr><th>Foyer</th><th>Début</th><th>Fin</th><th>Nuits</th>${S.prix?'<th class="r">Prix</th>':''}<th>Statut</th><th></th></tr></thead><tbody>${S.tour2.map((t,i) => { const f = C.foyers.find(z => z.cf===t.cf);
+    return `<tr><td>${esc(f?nomF(f):t.cf)}</td><td><input type="date" value="${t.debut}" data-in="t2" data-i="${i}" data-k="debut"></td><td><input type="date" value="${t.fin}" data-in="t2" data-i="${i}" data-k="fin"></td><td class="num">${E.nuits(t.debut,t.fin)}</td>${S.prix?`<td class="r">${prixHTML(E.tarif(t.debut,t.fin))}</td>`:''}
+      <td>${['proposé','accepté','décliné'].map(s => `<button class="chip ${t.statut===s?'on':''}" data-act="t2-statut" data-i="${i}" data-v="${s}">${s}</button>`).join(' ')}</td><td><button class="btn btn-line btn-sm" data-act="t2-del" data-i="${i}">Retirer</button></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="small muted">Aucune proposition pour l\'instant.</p>';
+  h += `<h3>Foyers non servis, par ordre de priorité</h3><div class="tbl-wrap"><table class="t"><thead><tr><th>#</th><th>Foyer</th><th>Br.</th><th>Note</th><th>Souhaits</th><th>2e tour</th></tr></thead><tbody>${ns.map((f,i) => { const t = S.tour2.find(z => z.cf===f.cf);
+    return `<tr><td class="num">${i+1}</td><td><b>${esc(nomF(f))}</b><div class="mini">${esc(f.corresp||'')}</div></td><td>${esc(f.br)}</td><td><span class="score ${scoreCls(f.score)}">${noteTxt(f.score)}</span></td><td>${C.demandes.filter(x => x.fid===f.id).map(x => `<span class="ch">${perC(x.demDebut,x.demFin)}</span>`).join('')}</td><td>${t?`<span class="tag ${t.statut==='accepté'?'t-ok':t.statut==='décliné'?'t-bad':'t-warn'}">${t.statut} · ${perC(t.debut,t.fin)}</span>`:'—'}</td></tr>`; }).join('')}</tbody></table></div>`;
+  h += `<p class="mini" style="margin-top:8px">${pl(libres.length,'créneau libre','créneaux libres')} de 2 nuits ou plus dans l'année, au total ${libres.reduce((s,[a,b]) => s+E.nuits(a,b),0)} nuits.</p>`;
+  return h;
+}
+
+/* ═══════════════ IMPORT / EXPORT ═══════════════ */
+function isoDe(v){
+  if(v==null || v==='') return null;
+  if(typeof v==='number'){ if(v<1000) return null; return E.ISO(Date.UTC(1899,11,30) + Math.floor(v+1e-9)*864e5); }
+  if(v instanceof Date) return E.ISO(Date.UTC(v.getFullYear(), v.getMonth(), v.getDate()));
+  const s = String(v).trim(); let m;
+  if((m = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return `${m[1]}-${m[2]}-${m[3]}`;
+  if((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/))) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return null;
+}
+function lireClasseur(wb){
+  const out = {};
+  for(const sn of wb.SheetNames){
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, raw:true, defval:null});
+    for(let hI=0; hI<Math.min(6,rows.length); hI++){
+      const H = (rows[hI]||[]).map(nrm);
+      const col = (...c) => H.findIndex(x => c.some(k => x===k));
+      const colP = (...c) => H.findIndex(x => c.some(k => x.startsWith(k)));
+      const corps = rows.slice(hI+1).filter(r => r && r.some(v => v!=null && v!==''));
+      if(!out.foyers && H.some(x => x.includes('choix n') && x.includes('debut'))){
+        const ci = i => [H.findIndex(x => x.includes('choix n'+i) && x.includes('debut')), H.findIndex(x => x.includes('choix n'+i) && x.includes('fin'))];
+        const iN = col('nom'), iP = col('prenom');
+        out.foyers = corps.filter(r => r[iN]).map(r => ({corresp:r[col('correspondant')]||'', branche:String(r[col('branche')]||''), horodateur:isoDe(r[col('horodateur')])||String(r[col('horodateur')]||''),
+          email:r[colP('adresse e-mail','adresse mail','email','e-mail')]||'', nom:String(r[iN]).trim(), prenom:String(r[iP]||'').trim(), option:r[colP('option',nrm(CONFIG.libelleOption))]||'',
+          commentaire:r[colP('commentaire')]||'', choix:[1,2,3].map(i => { const [a,b] = ci(i); const d = a>=0?isoDe(r[a]):null, f = b>=0?isoDe(r[b]):null; return d&&f?[d,f]:null; })}));
+        break;
+      }
+      const iAn = col('an','annee'), iA = colP('annuaire','ref annuaire'), iD = col('debut'), iNom = col('nom');
+      if(!out.hist && iAn>=0 && iA>=0 && iD>=0 && iNom>=0){
+        out.hist = corps.filter(r => r[iNom] && r[iAn]).map(r => [+r[iAn], isoDe(r[iD]), isoDe(r[col('fin')]), String(r[iNom]), String(r[col('prenom')] ?? 'nan'), String(r[iA]??'').trim().replace(/\.+$/,''), String(r[col('branche')]??'')]);
+        break;
+      }
+      const iAR = col('annee refus');
+      if(!out.refus && iNom>=0 && (iAR>=0 || (/refus/i.test(sn) && iAn>=0))){
+        const ia = iAR>=0 ? iAR : iAn;
+        out.refus = corps.filter(r => r[iNom] && r[ia]).map(r => [+r[ia], String(r[iNom]), String(r[col('prenom')] ?? 'nan'), String(r[colP('ref annuaire','annuaire')] ?? ''), r[col('source')]==='déduit'?'déduit':undefined].filter(v => v!==undefined));
+        break;
+      }
+    }
+  }
+  return out;
+}
+function importer(file){
+  const rd = new FileReader();
+  rd.onload = e => {
+    try{
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:false});
+      const o = lireClasseur(wb);
+      if(!o.foyers && !o.hist && !o.refus) throw new Error('aucun onglet reconnu (demandes du formulaire, historique ou refus)');
+      // depuis la démonstration, on repart de zéro : rien de fictif ne se mélange aux vraies données
+      const base = S.source.type==='int' ? {source:{demandes:'',historique:'',refus:''}, hist:[], refus:[], foyers:[]} : JSON.parse(JSON.stringify(donnees()));
+      if(o.foyers) base.foyers = o.foyers; if(o.hist) base.hist = o.hist;
+      if(o.refus){ const ans = new Set(o.refus.map(r => r[0])); base.refus = base.refus.filter(r => !ans.has(r[0])).concat(o.refus); o.refusGardes = base.refus.length - o.refus.length; }
+      S.data = base; S.source = {type:'fic', nom:file.name, date:new Date().toLocaleDateString('fr-FR'), stamp:'f'+Date.now()};
+      S.ui.ouvert = null; S.ui.fiche = null;
+      sauver(); render();
+      toast(`Importé : ${[o.foyers&&pl(o.foyers.length,'foyer demandeur','foyers demandeurs'), o.hist&&pl(o.hist.length,'séjour')+' d\'historique', o.refus&&pl(o.refus.length,'refus','refus')+(o.refusGardes?` (${o.refusGardes} refus d'autres années conservés)`:'')].filter(Boolean).join(', ')}.`);
+    }catch(err){ toast('Import impossible : '+err.message); }
+  };
+  rd.readAsArrayBuffer(file);
+}
+function feuille(rows, larg){ const ws = XLSX.utils.aoa_to_sheet(rows); if(larg) ws['!cols'] = larg.map(w => ({wch:w})); return ws; }
+const frD = iso => iso ? iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4) : '';
+function lignesAttribution(){
+  const C = calc();
+  const L = [['Début','Fin','Nuits','Nom','Prénom','Réf annuaire','Branche','Correspondant','E-mail','Choix','Note','Étape','Décidé par','Formule','Prix','Prix proposé (hors grille)','Réserve','Statut','Tour']];
+  for(const a of C.attrib){ const x = a.d, f = C.F[x.fid], np = nomPropre(f);
+    L.push([frD(x.debut), frD(x.fin), x.nuits, np.nom, np.prenom, f.ref||'', f.branche, f.corresp||'', f.email||'', x.choix, f.score, a.etape, libEtape(a), x.formule?E.LIB_FORMULE[x.formule]:(x.hg||''), x.prix??'', x.propose?x.propose.prix:'', x.reserve||'', statutAtt(a), 1]); }
+  for(const t of S.tour2){ const f = C.foyers.find(z => z.cf===t.cf); if(!f) continue; const np = nomPropre(f), tf = E.tarif(t.debut,t.fin);
+    L.push([frD(t.debut), frD(t.fin), E.nuits(t.debut,t.fin), np.nom, np.prenom, f.ref||'', f.branche, f.corresp||'', f.email||'', '', f.score, '2e tour', '', tf.formule?E.LIB_FORMULE[tf.formule]:(tf.hg||''), tf.prix??'', tf.propose?tf.propose.prix:'', '', t.statut, 2]); }
+  return L;
+}
+function exporter(cloture){
+  const C = calc(), d = donnees(), wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, feuille(lignesAttribution(), [11,11,6,20,16,12,22,14,26,6,5,7,40,22,8,10,30,10,5]), `Attribution ${E.N}`);
+  const servisT2 = new Set(S.tour2.filter(t => t.statut==='accepté').map(t => t.cf));
+  const R = [['Nom','Prénom','Réf annuaire','Branche','Correspondant','E-mail','Note','Explication de la note','Détail des choix','2e tour']];
+  for(const id of C.nonServis){ const f = C.F[id], np = nomPropre(f), v = varsFoyer(f); R.push([np.nom, np.prenom, f.ref||'', f.branche, f.corresp||'', f.email||'', f.score, v.explication_note, v.detail_choix.replace(/• /g,''), servisT2.has(f.cf)?'servi au 2e tour':'']); }
+  XLSX.utils.book_append_sheet(wb, feuille(R, [20,16,12,22,14,26,5,40,90,14]), `Refus ${E.N}`);
+  const Dm = [['Correspondant','Branche','Fichier source','Horodateur','Adresse e-mail','Nom','Prénom','Choix nº1 - date de début','Choix nº1 - date de fin','Choix nº2 - date de début','Choix nº2 - date de fin','Choix nº3 - date de début','Choix nº3 - date de fin',CONFIG.libelleOption,'Commentaires']];
+  for(const r of d.foyers) Dm.push([r.corresp, r.branche, '', r.horodateur, r.email, r.nom, r.prenom, ...[0,1,2].flatMap(i => r.choix[i] ? [frD(r.choix[i][0]), frD(r.choix[i][1])] : ['','']), r.option, r.commentaire]);
+  XLSX.utils.book_append_sheet(wb, feuille(cloture ? [Dm[0]] : Dm, [14,22,4,18,26,20,16,12,12,12,12,12,12,8,60]), cloture ? `Demandes ${E.N+1}` : `Demandes ${E.N}`);
+  const H = [['An','Début','Fin','Nom','Prénom','Annuaire','Branche']].concat(d.hist.map(h => [h[0], frD(h[1]), frD(h[2]), h[3], h[4], h[5], h[6]]));
+  const Rf = [['An','Nom','Prénom','Ref annuaire','Source']].concat(d.refus.map(r => [r[0], r[1], r[2], r[3]||'', r[4]||'']));
+  if(cloture){
+    for(const a of C.attrib){ if(statutAtt(a)==='annulé') continue; const f = C.F[a.d.fid]; H.push([E.N, frD(a.d.debut), frD(a.d.fin), f.nom, f.prenom, f.ref||'', f.br]); }
+    for(const t of S.tour2){ if(t.statut!=='accepté') continue; const f = C.foyers.find(z => z.cf===t.cf); if(f) H.push([E.N, frD(t.debut), frD(t.fin), f.nom, f.prenom, f.ref||'', f.br]); }
+    for(const id of C.nonServis){ const f = C.F[id]; if(!servisT2.has(f.cf)) Rf.push([E.N, f.nom, f.prenom, f.ref||'', `refus ${E.N}`]); }
+  }
+  XLSX.utils.book_append_sheet(wb, feuille(H, [6,11,11,20,16,12,8]), 'Historique séjours');
+  XLSX.utils.book_append_sheet(wb, feuille(Rf, [6,20,16,12,12]), 'Refus');
+  const Dc = [['Type','Foyer','Détail','Motif']];
+  const parCle = new Map(C.demandes.map(x => [x.cle, x]));
+  const qui = k => { const x = parCle.get(k); return x ? nomF(C.F[x.fid])+', choix '+x.choix : k; };
+  for(const k of S.p.forces) Dc.push(['Attribution forcée', qui(k), '', S.raisons['force:'+k]||'']);
+  for(const [k,v] of Object.entries(S.p.ajust)) Dc.push(['Dates modifiées sous réserve', qui(k), `${frD(v.debut)} → ${frD(v.fin)} : ${v.note||''}`, S.raisons['ajust:'+k]||'']);
+  for(const [k,v] of Object.entries(S.p.exclus)) Dc.push(['Demande écartée', qui(k), '', v]);
+  for(const [cf,o] of Object.entries(S.ovr)){ const f = C.foyers.find(z => z.cf===cf); Dc.push(['Rapprochement', f?nomF(f):cf, JSON.stringify(o), S.raisons['ovr:'+cf]||'']); }
+  Dc.push([]); Dc.push(['Règles', '', `note (${S.p.noteMode==='dernier'?'dernier séjour':'addition des séjours'}) puis ${S.p.ordre.join(' > ')} ; Noël : ${S.p.noelMin||0} nuits minimum ; semaine complète prioritaire : ${(S.p.semComplete||[]).join(', ')||'non'} ; choix sans concurrent : ${S.p.modeA==='meilleur'?'meilleur choix d\'abord':'attribution directe'}`, '']);
+  XLSX.utils.book_append_sheet(wb, feuille(Dc, [26,30,50,70]), 'Décisions');
+  const nom = cloture ? `classeur_sejours_${E.N+1}.xlsx` : `attribution_sejours_${E.N}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, nom);
+  toast(cloture ? `Classeur ${E.N+1} exporté : historique et refus complétés avec ${E.N}.` : 'Classeur de travail exporté.');
+}
+function exportBrevo(){
+  const C = calc(); const fs = [...document.querySelectorAll('#liste-f [data-act=fiche]')].map(b => C.foyers.find(f => f.cf===b.dataset.v)).filter(Boolean);
+  const q = s => '"'+String(s??'').replace(/"/g,'""')+'"';
+  const L = [['EMAIL','PRENOM','NOM','BRANCHE','CORRESPONDANT','STATUT','SEJOUR_DEBUT','SEJOUR_FIN','NUITS','PRIX','NOTE','COURRIER'].join(';')];
+  for(const f of fs){ const a = C.attribDe.get(f.id), np = nomPropre(f), p = a ? prixDe(a.d) : null;
+    L.push([f.email, np.prenom, np.nom, f.br, f.corresp, a?(a.d.reserve?'reserve':'accord'):'refus', a?frD(a.d.debut):'', a?frD(a.d.fin):'', a?a.d.nuits:'', S.prix&&p?Math.round(p.val):'', f.score, lettre(f)].map(q).join(';')); }
+  const blob = new Blob(['﻿'+L.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = `contacts_${E.N}_brevo.csv`; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 1000);
+  toast(`${pl(fs.length,'contact')} exporté${fs.length>1?'s':''} pour Brevo.`);
+}
+function toast(t){ const e = document.getElementById('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 3500); }
+
+/* ═══════════════ ÉVÉNEMENTS ═══════════════ */
+function majOvr(cf, fn){ const o = {...(S.ovr[cf]||{})}; fn(o); for(const k of Object.keys(o)) if(o[k]==null || o[k]===false || (Array.isArray(o[k]) && !o[k].length && k==='alias')) delete o[k];
+  if(Object.keys(o).length) S.ovr[cf] = o; else delete S.ovr[cf]; }
+const val = id => (document.getElementById(id)||{}).value || '';
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if(!b) return;
+  const act = b.dataset.act, v = b.dataset.v;
+  const C = calc();
+  switch(act){
+    case 'onglet': S.ui.onglet = v; break;
+    case 'aller': S.ui.onglet = v; if(v==='attribution' && b.dataset.ref) S.ui.attOuvert = b.dataset.ref; if(v==='demandes' && b.dataset.ref) S.ui.filtre = b.dataset.ref; break;
+    case 'prix': S.prix = !S.prix; break;
+    case 'hg': S.hgPropose = !S.hgPropose; break;
+    case 'semc': { const l = new Set(S.p.semComplete||[]); l.has(v) ? l.delete(v) : l.add(v); S.p.semComplete = [...l]; break; }
+    case 'nommer': S.nommer = !S.nommer; break;
+    case 'ordre': { const o = S.p.ordre, i = o.indexOf(b.dataset.c), j = i + (+b.dataset.d); if(j<0||j>=o.length) return; [o[i],o[j]] = [o[j],o[i]]; break; }
+    case 'filtre': S.ui.filtre = v; S.ui.ouvert = null; break;
+    case 'ouvrir': S.ui.ouvert = S.ui.ouvert===v ? null : v; break;
+    case 'att': S.ui.attOuvert = S.ui.attOuvert===v ? null : v; break;
+    case 'ref': { const det = b.closest('.detail'), toutes = [...det.querySelectorAll('[data-act=ref]')].map(c => c.dataset.ref);
+      const coches = [...det.querySelectorAll('[data-act=ref]')].filter(c => c.checked).map(c => c.dataset.ref);
+      majOvr(b.dataset.cf, o => { o.refs = coches.length===toutes.length ? (toutes.length>1 ? 'tous' : null) : coches.sort(); }); break; }
+    case 'ign-refus': majOvr(b.dataset.cf, o => { o.ignorerRefus = b.checked; }); break;
+    case 'service': majOvr(b.dataset.cf, o => { o.service = b.checked; }); break;
+    case 'alias-add': { const n = val('al-nom').trim(), p = val('al-pre').trim(); if(!n||!p){ toast('Indiquez le nom et le prénom.'); return; } majOvr(b.dataset.cf, o => { o.alias = [...(o.alias||[]), {nom:n, prenom:p}]; }); break; }
+    case 'alias-del': majOvr(b.dataset.cf, o => { o.alias = (o.alias||[]).filter((_,i) => i!==+b.dataset.i); }); break;
+    case 'forcer': { const k = b.dataset.k, cible = val('force-'+k), r = val('force-r-'+k).trim();
+      if(!cible) return; S.p.forces = S.p.forces.filter(z => z!==cible).concat(cible); if(r) S.raisons['force:'+cible] = r; S.ui.attOuvert = cible; toast('Décision enregistrée : la répartition est recalculée autour de ce choix.'); break; }
+    case 'ajuster': { const k = b.dataset.k, d = val('aj-d-'+k), f = val('aj-f-'+k), n = val('aj-n-'+k).trim();
+      if(!d||!f||f<=d){ toast('Dates invalides.'); return; } S.p.ajust[k] = {debut:d, fin:f, note:n||'dates modifiées'}; toast('Dates modifiées, sous réserve d\'accord du foyer.'); break; }
+    case 'exclure': { const k = b.dataset.k, r = val('ex-r-'+k).trim(); S.p.exclus[k] = 'écartée par le comité' + (r?' : '+r:''); S.p.forces = S.p.forces.filter(z => z!==k); S.ui.attOuvert = null; break; }
+    case 'annuler-dec': { const t = b.dataset.type, k = b.dataset.k;
+      if(t==='force'){ S.p.forces = S.p.forces.filter(z => z!==k); delete S.raisons['force:'+k]; }
+      if(t==='ajust'){ delete S.p.ajust[k]; delete S.raisons['ajust:'+k]; }
+      if(t==='exclus') delete S.p.exclus[k];
+      if(t==='ovr'){ delete S.ovr[k]; delete S.raisons['ovr:'+k]; }
+      break; }
+    case 'statut': S.statuts[b.dataset.k] = v; if(v==='attribué') delete S.statuts[b.dataset.k]; break;
+    case 'crfiltre': S.ui.crFiltre = v; S.ui.fiche = null; break;
+    case 'fiche': S.ui.fiche = v; break;
+    case 'copier': { const t = document.getElementById('lettre'); t.select(); (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(() => toast('Courrier copié.')).catch(() => { document.execCommand('copy'); toast('Courrier copié.'); }); return; }
+    case 'imprimer': window.print(); return;
+    case 'modeles-def': S.modeles = {...MODELES_DEF}; break;
+    case 'brevo': exportBrevo(); return;
+    case 't2-add': S.tour2.push({cf:b.dataset.cf, debut:b.dataset.d, fin:b.dataset.f, statut:'proposé'}); break;
+    case 't2-statut': S.tour2[+b.dataset.i].statut = v; break;
+    case 't2-del': S.tour2.splice(+b.dataset.i, 1); break;
+    case 'importer': document.getElementById('file-input').click(); return;
+    case 'exporter': exporter(false); return;
+    case 'cloturer': exporter(true); return;
+    case 'reset': if(!confirm('Revenir aux données de démonstration ? Les modifications faites dans ce navigateur seront perdues.')) return;
+      S = etatInitial(); BASE_KEY = null; CALC_KEY = null; appliquerDecisionsInitiales(); toast('Application réinitialisée.'); break;
+    default: return;
+  }
+  sauver(); render();
+  if(act==='aller' && S.ui.attOuvert){ const el = document.getElementById('att-'+S.ui.attOuvert); if(el) el.scrollIntoView({block:'center'}); }
+});
+document.addEventListener('input', e => {
+  const t = e.target, k = t.dataset.in; if(!k) return;
+  if(k==='q'){ S.ui.q = t.value; document.getElementById('liste-dem').innerHTML = tableDemandes(); sauver(); return; }
+  if(k==='crQ'){ S.ui.crQ = t.value; sauver(); const pos = t.selectionStart; renderVue(); const n = document.querySelector('[data-in=crQ]'); n.focus(); n.setSelectionRange(pos,pos); return; }
+  if(k==='modele'){ S.modeles[t.dataset.k] = t.value; sauver(); const l = document.getElementById('lettre'); const C = calc(); const f = C.foyers.find(z => z.cf===S.ui.fiche); if(l && f) l.value = lettre(f); return; }
+  if(k==='raison-ovr'){ S.raisons['ovr:'+t.dataset.cf] = t.value; sauver(); return; }
+});
+document.addEventListener('change', e => {
+  const t = e.target, k = t.dataset.in;
+  if(t.id==='file-input'){ if(t.files[0]) importer(t.files[0]); t.value = ''; return; }
+  if(!k) return;
+  if(k==='br'){ S.ui.br = t.value; S.ui.ouvert = null; }
+  else if(k==='noelMin') S.p.noelMin = Math.max(0, Math.min(10, +t.value||0));
+  else if(k==='modeA') S.p.modeA = t.value;
+  else if(k==='noteMode') S.p.noteMode = t.value;
+  else if(k==='dateReponse') S.dates.reponse = t.value || S.dates.reponse;
+  else if(k==='t2'){ const x = S.tour2[+t.dataset.i]; if(t.value) x[t.dataset.k] = t.value; if(x.fin<=x.debut) x.fin = E.plus(x.debut, 2); }
+  else return;
+  sauver(); render();
+});
+
+/* ═══════════════ INIT ═══════════════ */
+document.title = `Attribution des séjours ${E.N} · ${CONFIG.association}`;
+document.getElementById('h-eyebrow').textContent = CONFIG.association;
+document.getElementById('h-titre').textContent = `Attribution des séjours ${E.N}`;
+document.getElementById('h-sub').textContent = `Note de priorité · trois tours · décisions du comité · prix ${E.N}`;
+charger();
+appliquerDecisionsInitiales();
+sauver();
+render();
+
+</script>
+</body>
+</html>
